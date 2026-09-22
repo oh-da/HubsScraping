@@ -53,6 +53,8 @@ def main() -> int:
     ap.add_argument("--out", default=None, help="output html (default <data>/out/hub_stations_map.html)")
     ap.add_argument("--leaflet-css", required=True, help="path to leaflet.css to inline")
     ap.add_argument("--leaflet-js", default=LEAFLET_JS, help="script src for leaflet.js")
+    ap.add_argument("--fragment", action="store_true",
+                    help="emit only the page body (for the claude.ai artifact wrapper) instead of a full document")
     args = ap.parse_args()
     data = Path(args.data)
     out = Path(args.out) if args.out else data / "out" / "hub_stations_map.html"
@@ -100,6 +102,11 @@ def main() -> int:
         "__N_STATIONS__": f"{len(st):,}",
     }.items():
         html = html.replace(k, v)
+    if not args.fragment:
+        html = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+                '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
+                + html.replace("\n<div id=\"map\"", "\n</head>\n<body>\n<div id=\"map\"", 1)
+                + "\n</body>\n</html>\n")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
     print(f"wrote {out} ({out.stat().st_size/1e6:.2f} MB): {len(rows)} hub stations, "

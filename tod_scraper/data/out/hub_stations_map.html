@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TOD Israel Hubs</title>
 <meta name="description" content="Hub stations of the TOD Israel transit network, grouped by the number of transit modes they combine.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
@@ -761,6 +766,8 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
 @media (prefers-reduced-motion: reduce) { .leaflet-zoom-anim .leaflet-zoom-animated, .leaflet-fade-anim .leaflet-popup { transition: none; } }
 </style>
 
+</head>
+<body>
 <div id="map" role="application" aria-label="Map of TOD Israel hub stations"></div>
 
 <section class="panel" id="panel" aria-label="Layers and legend">
@@ -897,3 +904,6 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   [6, 5, 4, 3, 2, 1].forEach(g => groupLayers[g].eachLayer(m => m.bringToFront && m.bringToFront()));
 })();
 </script>
+
+</body>
+</html>

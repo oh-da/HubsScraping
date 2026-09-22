@@ -1,0 +1,50 @@
+name: Deploy map to GitHub Pages
+
+on:
+  push:
+    branches: [claude/sleepy-allen-npyjnv, main, master]
+    paths:
+      - "tod_scraper/data/out/hub_stations_map.html"
+      - "tod_scraper/data/out/tod_israel.xlsx"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          cp tod_scraper/data/out/hub_stations_map.html site/index.html
+          cp tod_scraper/data/out/hub_stations_map.html site/hub_stations_map.html
+          cp tod_scraper/data/out/tod_israel.xlsx site/tod_israel.xlsx
+          touch site/.nojekyll
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
