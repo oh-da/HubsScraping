@@ -50,6 +50,22 @@ Rebuild the map after a new scrape with
 `python make_hub_map.py --leaflet-css <path to leaflet.css> --copy-to ../index.html`
 (get the CSS with `npm pack leaflet@1.9.4`).
 
+## Comparing with an external hub list
+
+`tod_scraper/compare_hubs.py` matches a hub list (xlsx with x/y in WGS84, e.g. the
+hub prioritization results) against the map's multi-modal hubs (hub_id set,
+n_modes >= 2) by location, 400 m tolerance by default:
+
+```bash
+python compare_hubs.py data/input/hub_prioritization_results.xlsx \
+    --leaflet-css <leaflet.css> --copy-map-to ../compare.html
+```
+
+Outputs `data/out/hub_comparison.xlsx` (sheets: summary, both, only_xlsx, only_map,
+possible_matches) and `data/out/hub_comparison_map.html` (also served at
+https://oh-da.github.io/HubsScraping/compare.html), which draws each matched pair
+one on top of the other with a tie line showing the offset.
+
 ## Quick start
 
 ```bash

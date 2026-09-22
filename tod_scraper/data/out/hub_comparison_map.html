@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hub List Comparison</title>
+<meta name="description" content="Multi-modal hubs of the TOD Israel map compared with the hub prioritization list: in both, only in the list, only on the map.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
+<style>
+/* required styles */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+/* Prevents IE11 from highlighting tiles in blue */
+.leaflet-tile::selection {
+	background: transparent;
+}
+/* Safari renders non-retina tile on retina better with this, but Chrome is worse */
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+/* hack that prevents hw layers "stretching" when loading new tiles */
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+/* .leaflet-container svg: reset svg max-width decleration shipped in Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: map is broken in FF if you have max-width: 100% on tiles */
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	/* Fallback for FF which doesn't support pinch-zoom */
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	behavior: none;
+	display: inline-block;
+	position: absolute;
+	}
+
+
+/* control positioning */
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+/* zoom and fade animations */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+/* cursors */
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+/* marker & overlays interactivity */
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+
+/* visual tweaks */
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+/* general typography */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+/* general toolbar styles */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+/* zoom control */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+/* layers control */
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	background-image: none;
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-image: none;
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+/* Default icon URLs */
+.leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
+	background-image: none;
+	}
+
+
+/* attribution and scale controls */
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+/* popup */
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+/* div icon */
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+/* Tooltip */
+/* Base styles for the element that has a tooltip */
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+/* Directions */
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+/* Printing */
+
+@media print {
+	/* Prevent printers from removing background-images of controls. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
+
+:root {
+  color-scheme: light;
+  --bg: #f4f3ef; --panel: #fffefb; --panel-border: #dcd9d0; --ink: #1c1b18; --ink-2: #5b5950; --ink-3: #8a877c;
+  --map-bg: #e9e9e9; --shadow: 0 4px 18px rgba(30,28,20,.16); --accent: #2a78d6; --focus: #2a78d6; --ring: #ffffff;
+  --both: #2a78d6; --onlyx: #eb6834; --onlym: #1baf7a; --tie: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #17171a; --panel: #212125; --panel-border: #3a3a40; --ink: #f2f1ea; --ink-2: #c3c2b7; --ink-3: #8b8a82;
+    --map-bg: #e9e9e9; --shadow: 0 4px 18px rgba(0,0,0,.5); --accent: #3987e5; --focus: #3987e5; --ring: #ffffff;
+    --both: #2a78d6; --onlyx: #d95926; --onlym: #199e70; --tie: #2a78d6;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #17171a; --panel: #212125; --panel-border: #3a3a40; --ink: #f2f1ea; --ink-2: #c3c2b7; --ink-3: #8b8a82;
+  --map-bg: #e9e9e9; --shadow: 0 4px 18px rgba(0,0,0,.5); --accent: #3987e5; --focus: #3987e5; --ring: #ffffff;
+  --both: #2a78d6; --onlyx: #d95926; --onlym: #199e70; --tie: #2a78d6;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heebo", "Segoe UI", system-ui, sans-serif; }
+#map { position: absolute; inset: 0; background: var(--map-bg); }
+.leaflet-container { background: var(--map-bg); font: inherit; }
+.osm-gray { filter: grayscale(1) brightness(1.06) contrast(0.88); }
+.leaflet-bar { box-shadow: var(--shadow); border: 1px solid var(--panel-border); }
+.leaflet-bar a { background: var(--panel); color: var(--ink); border-bottom-color: var(--panel-border); }
+.leaflet-bar a:hover, .leaflet-bar a:focus-visible { background: var(--bg); }
+.leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--ink-3); font-size: 11px; }
+.leaflet-control-attribution a { color: var(--ink-2); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
+.leaflet-popup-content-wrapper { border-radius: 8px; border: 1px solid var(--panel-border); }
+.leaflet-popup-content { margin: 12px 14px; font-size: 13px; min-width: 220px; }
+.leaflet-container a.leaflet-popup-close-button { color: var(--ink-3); }
+.leaflet-container :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.panel { position: absolute; z-index: 1000; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; width: 316px; max-width: calc(100% - 24px);
+  background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; box-shadow: var(--shadow); padding: 14px 16px 12px; box-sizing: border-box; }
+.panel h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
+.panel .sub { margin: 2px 0 0; color: var(--ink-2); font-size: 12.5px; }
+.eyebrow { margin: 14px 0 6px; font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.sets { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.sets label { display: grid; grid-template-columns: 18px 26px 1fr auto; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+.sets label:hover { background: var(--bg); }
+.sets input { margin: 0; width: 15px; height: 15px; accent-color: var(--accent); }
+.sets input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.sets .lbl { font-weight: 500; line-height: 1.2; }
+.sets .lbl small { display: block; font-weight: 400; color: var(--ink-3); font-size: 11.5px; }
+.sets .cnt { color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 13px; text-align: right; }
+.sym { justify-self: center; width: 22px; height: 16px; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.actions button { flex: 1 1 auto; white-space: nowrap; font: inherit; font-size: 12.5px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--panel-border); background: var(--bg); color: var(--ink); cursor: pointer; }
+.actions button:hover { border-color: var(--ink-3); }
+.actions button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.note { margin: 10px 0 0; font-size: 11.5px; color: var(--ink-3); }
+.pp h2 { margin: 0 0 6px; font-size: 14px; font-weight: 700; line-height: 1.25; }
+.pp .tag { display: inline-block; font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; padding: 1px 7px; border-radius: 99px; color: #fff; margin-bottom: 6px; }
+.pp .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pp .col { border: 1px solid var(--panel-border); border-radius: 6px; padding: 6px 8px; }
+.pp .col h3 { margin: 0 0 3px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+.pp .col .nm { font-weight: 600; }
+.pp .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 12.5px; margin-top: 6px; }
+.pp .kv dt { color: var(--ink-3); } .pp .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+.pp .diff { color: var(--onlyx); }
+.pp .same { color: var(--onlym); }
+@media (max-width: 560px) {
+  .panel { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 12px; right: 12px; width: auto; max-height: 48%; overflow: auto; }
+  .leaflet-top.leaflet-right { top: env(safe-area-inset-top, 0px); }
+}
+@media (prefers-reduced-motion: reduce) { .leaflet-zoom-anim .leaflet-zoom-animated, .leaflet-fade-anim .leaflet-popup { transition: none; } }
+</style>
+
+</head>
+<body>
+<div id="map" role="application" aria-label="Map comparing two hub lists"></div>
+
+<section class="panel" id="panel" aria-label="Sets and legend">
+  <h1>Hub list comparison</h1>
+  <p class="sub">204 map hubs (n_modes ≥ 2) vs 142 hubs in 9838c563-hub_prioritization_results.xlsx · matched within 400 m</p>
+  <p class="eyebrow">Sets</p>
+  <ul class="sets">
+    <li><label><input type="checkbox" id="set-both" checked>
+      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="5" y1="8" x2="17" y2="8" stroke="var(--tie)" stroke-width="1.5"/><circle cx="5" cy="8" r="4.5" fill="var(--both)" stroke="var(--ring)" stroke-width="1.5"/><circle cx="17" cy="8" r="4.5" fill="none" stroke="var(--both)" stroke-width="2.2"/></svg>
+      <span class="lbl">In both<small>filled = map hub · ring = xlsx hub · line = offset</small></span><span class="cnt" id="cnt-both"></span></label></li>
+    <li><label><input type="checkbox" id="set-onlyx" checked>
+      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="5" fill="none" stroke="var(--onlyx)" stroke-width="2.4"/></svg>
+      <span class="lbl">Only in xlsx<small>no map hub within 400 m</small></span><span class="cnt" id="cnt-onlyx"></span></label></li>
+    <li><label><input type="checkbox" id="set-onlym" checked>
+      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="5" fill="var(--onlym)" stroke="var(--ring)" stroke-width="1.5"/></svg>
+      <span class="lbl">Only in map<small>no xlsx hub within 400 m</small></span><span class="cnt" id="cnt-onlym"></span></label></li>
+  </ul>
+  <div class="actions">
+    <button type="button" id="btn-fit">Zoom to all</button>
+    <button type="button" id="btn-tlv">Tel Aviv</button>
+    <button type="button" id="btn-hfa">Haifa</button>
+    <button type="button" id="btn-jlm">Jerusalem</button>
+  </div>
+  <p class="note">Basemap: OpenStreetMap (light gray). Matching is by location only; the popup shows whether the mode sets agree.</p>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  const PAIRS = [{"hub":134,"mname":" - 1184","mmodes":"Metro | LRT | BRT | Rail | Rail fast","mn":5,"mlat":32.082937,"mlng":34.796987,"xrow":2,"xname":"תחנת רכבת סבידור מרכז","xmodes":"Metro | LRT | Rail | Rail fast","xn":5,"xrank":1,"xtype":"ארצי","xlat":32.08339,"xlng":34.797273,"d":57,"eq":false},{"hub":372,"mname":" - 1422","mmodes":"Metro | LRT | BRT | Rail | Rail fast","mn":5,"mlat":31.788008,"mlng":35.203357,"xrow":3,"xname":"תחנת רכבת ירושלים-יצחק נבון","xmodes":"LRT | Rail | Rail fast","xn":4,"xrank":2,"xtype":"ארצי","xlat":31.786945,"xlng":35.201467,"d":214,"eq":false},{"hub":283,"mname":" - 1333","mmodes":"Metro | LRT | BRT | Rail | Rail fast | Funicular","mn":6,"mlat":32.792788,"mlng":35.03447,"xrow":4,"xname":"מרכזית המפרץ","xmodes":"LRT | BRT | Rail | Rail fast | Cable","xn":6,"xrank":3,"xtype":"ארצי","xlat":32.793228,"xlng":35.035458,"d":105,"eq":false},{"hub":110,"mname":"אילת - 1160","mmodes":"LRT | BRT","mn":2,"mlat":31.241537,"mlng":34.796374,"xrow":5,"xname":"תחנת רכבת באר שבע מרכז","xmodes":"LRT | Rail","xn":3,"xrank":4,"xtype":"מטרופוליני","xlat":31.242188,"xlng":34.796917,"d":89,"eq":false},{"hub":111,"mname":"יהושע חנקין - 1161","mmodes":"Rail | Rail fast","mn":2,"mlat":31.243222,"mlng":34.798327,"xrow":5,"xname":"תחנת רכבת באר שבע מרכז","xmodes":"LRT | Rail","xn":3,"xrank":4,"xtype":"מטרופוליני","xlat":31.242188,"xlng":34.796917,"d":177,"eq":false},{"hub":258,"mname":"העליה השניה - 1308","mmodes":"Metro | BRT","mn":2,"mlat":32.831382,"mlng":34.985098,"xrow":6,"xname":"תחנת רכבת בת גלים","xmodes":"LRT | BRT | Rail","xn":4,"xrank":5,"xtype":"מטרופוליני","xlat":32.830744,"xlng":34.983674,"d":151,"eq":false},{"hub":233,"mname":" - 1283","mmodes":"Metro | BRT | Rail | Rail fast | Funicular","mn":5,"mlat":32.791971,"mlng":34.959895,"xrow":7,"xname":"מרכזית חוף הכרמל","xmodes":"LRT | BRT | Rail | Rail fast","xn":5,"xrank":6,"xtype":"ארצי","xlat":32.793491,"xlng":34.957524,"d":279,"eq":false},{"hub":211,"mname":" - 1261","mmodes":"LRT | Rail","mn":2,"mlat":32.31994,"mlng":34.869539,"xrow":8,"xname":"תחנת רכבת נתניה","xmodes":"LRT | Rail","xn":3,"xrank":96,"xtype":"ארצי","xlat":32.322459,"xlng":34.868369,"d":300,"eq":true},{"hub":220,"mname":" - 1270","mmodes":"LRT | BRT","mn":2,"mlat":32.3234,"mlng":34.904332,"xrow":9,"xname":"צומת השרון","xmodes":"LRT | BRT","xn":2,"xrank":8,"xtype":"Not Hub","xlat":32.323824,"xlng":34.90567,"d":134,"eq":true},{"hub":311,"mname":" - 1361","mmodes":"Metro | BRT","mn":2,"mlat":32.859487,"mlng":35.09071,"xrow":10,"xname":"מרכזית הקריות","xmodes":"LRT | BRT","xn":2,"xrank":9,"xtype":"עירוני","xlat":32.85952,"xlng":35.089992,"d":67,"eq":false},{"hub":272,"mname":" - 1322","mmodes":"Metro | BRT","mn":2,"mlat":32.810287,"mlng":35.005346,"xrow":12,"xname":"חיפה מזרח","xmodes":"LRT | BRT | Rail","xn":4,"xrank":11,"xtype":"עירוני","xlat":32.810875,"xlng":35.005629,"d":70,"eq":false},{"hub":160,"mname":"איילון דרום - 1210","mmodes":"Metro | BRT","mn":2,"mlat":32.131747,"mlng":34.808816,"xrow":15,"xname":"גלילות דרום","xmodes":"Metro | Rail | Rail fast","xn":4,"xrank":14,"xtype":"ארצי","xlat":32.133363,"xlng":34.808885,"d":179,"eq":false},{"hub":161,"mname":" - 1211","mmodes":"Rail | Rail fast","mn":2,"mlat":32.135155,"mlng":34.810122,"xrow":15,"xname":"גלילות דרום","xmodes":"Metro | Rail | Rail fast","xn":4,"xrank":14,"xtype":"ארצי","xlat":32.133363,"xlng":34.808885,"d":230,"eq":false},{"hub":138,"mname":" - 1188","mmodes":"LRT | BRT | Rail | Rail fast","mn":4,"mlat":31.261144,"mlng":34.809236,"xrow":17,"xname":"תחנת רכבת באר שבע צפון-האוניברסיטה","xmodes":"LRT | Rail | Rail fast","xn":4,"xrank":16,"xtype":"ארצי","xlat":31.260929,"xlng":34.809136,"d":26,"eq":false},{"hub":275,"mname":"אליהו הנביא - 1325","mmodes":"Metro | BRT | Funicular","mn":3,"mlat":32.817911,"mlng":35.000063,"xrow":18,"xname":"קרית הממשלה, חיפה","xmodes":"BRT | Funicular","xn":2,"xrank":17,"xtype":"עירוני","xlat":32.818843,"xlng":34.999307,"d":125,"eq":false},{"hub":389,"mname":" - 1439","mmodes":"Metro | LRT | Rail | Rail fast","mn":4,"mlat":31.782823,"mlng":35.217645,"xrow":19,"xname":"תחנת רכבת ירושלים-מרכז","xmodes":"LRT | Rail | Rail fast","xn":4,"xrank":18,"xtype":"ארצי","xlat":31.782964,"xlng":35.21813,"d":49,"eq":false},{"hub":96,"mname":"איילון דרום - 1146","mmodes":"Metro | LRT | BRT | Rail","mn":4,"mlat":32.03813,"mlng":34.777767,"xrow":20,"xname":"תחנת רכבת צומת חולון","xmodes":"Metro | LRT | Rail","xn":3,"xrank":19,"xtype":"מטרופוליני","xlat":32.037642,"xlng":34.776611,"d":122,"eq":false},{"hub":97,"mname":"גיתית - 1147","mmodes":"LRT | BRT","mn":2,"mlat":32.040672,"mlng":34.774676,"xrow":20,"xname":"תחנת רכבת צומת חולון","xmodes":"Metro | LRT | Rail","xn":3,"xrank":19,"xtype":"מטרופוליני","xlat":32.037642,"xlng":34.776611,"d":382,"eq":false},{"hub":314,"mname":"דוד רמז - 1364","mmodes":"BRT | Rail","mn":2,"mlat":32.927862,"mlng":35.082792,"xrow":24,"xname":"תחנת רכבת עכו","xmodes":"Rail | Rail fast","xn":2,"xrank":23,"xtype":"מטרופוליני","xlat":32.92843,"xlng":35.082513,"d":68,"eq":false},{"hub":159,"mname":"איילון צפון - 1209","mmodes":"LRT | Rail","mn":2,"mlat":32.103631,"mlng":34.805133,"xrow":25,"xname":"תחנת רכבת ת\"א האוניברסיטה","xmodes":"LRT | Rail","xn":3,"xrank":24,"xtype":"מטרופוליני","xlat":32.103841,"xlng":34.80562,"d":52,"eq":true},{"hub":178,"mname":"בן גוריון - 1228","mmodes":"Metro | LRT | BRT","mn":3,"mlat":32.091346,"mlng":34.822891,"xrow":26,"xname":"מרכז דן, בני ברק","xmodes":"LRT | BRT","xn":2,"xrank":25,"xtype":"עירוני","xlat":32.091084,"xlng":34.823163,"d":39,"eq":false},{"hub":289,"mname":" - 1339","mmodes":"Metro | BRT","mn":2,"mlat":32.806645,"mlng":35.057237,"xrow":28,"xname":"חוצות המפרץ","xmodes":"LRT | BRT","xn":2,"xrank":27,"xtype":"עירוני","xlat":32.805161,"xlng":35.056458,"d":180,"eq":false},{"hub":337,"mname":"781 - 1387","mmodes":"LRT | BRT","mn":2,"mlat":32.822592,"mlng":35.131031,"xrow":30,"xname":"מחלף גילעם","xmodes":"LRT | BRT","xn":2,"xrank":29,"xtype":"עירוני","xlat":32.823316,"xlng":35.132325,"d":145,"eq":true},{"hub":335,"mname":" - 1385","mmodes":"Metro | LRT | BRT","mn":3,"mlat":32.822703,"mlng":35.135455,"xrow":30,"xname":"מחלף גילעם","xmodes":"LRT | BRT","xn":2,"xrank":29,"xtype":"עירוני","xlat":32.823316,"xlng":35.132325,"d":301,"eq":false},{"hub":101,"mname":" - 1151","mmodes":"Metro | LRT | Rail","mn":3,"mlat":32.054064,"mlng":34.784808,"xrow":32,"xname":"תחנת רכבת תל אביב ההגנה","xmodes":"Metro | LRT | Rail","xn":4,"xrank":31,"xtype":"ארצי","xlat":32.054157,"xlng":34.784988,"d":20,"eq":true},{"hub":338,"mname":"781 - 1388","mmodes":"Metro | BRT","mn":2,"mlat":32.822486,"mlng":35.148703,"xrow":35,"xname":"צומת אבליים","xmodes":"LRT | BRT","xn":2,"xrank":34,"xtype":"עירוני","xlat":32.82315,"xlng":35.151415,"d":264,"eq":false},{"hub":140,"mname":"40 - 1190","mmodes":"Metro | BRT","mn":2,"mlat":31.869975,"mlng":34.818657,"xrow":36,"xname":"צומת בילו/בית חולים קפלן","xmodes":"Metro | LRT | BRT","xn":3,"xrank":35,"xtype":"מטרופוליני","xlat":31.869356,"xlng":34.817333,"d":143,"eq":false},{"hub":203,"mname":"משעול גיל - 1253","mmodes":"Metro | LRT","mn":2,"mlat":32.177027,"mlng":34.892952,"xrow":37,"xname":"ויצמן/טשרניחובסקי, כפר סבא","xmodes":"Metro | LRT | BRT","xn":3,"xrank":36,"xtype":"מטרופוליני","xlat":32.178196,"xlng":34.894228,"d":177,"eq":false},{"hub":119,"mname":" - 1169","mmodes":"BRT | Rail","mn":2,"mlat":31.36954,"mlng":34.79851,"xrow":38,"xname":"תחנת רכבת להבים-רהט","xmodes":"LRT | Rail","xn":2,"xrank":37,"xtype":"מטרופוליני","xlat":31.368963,"xlng":34.797832,"d":91,"eq":false},{"hub":217,"mname":"אלי הורביץ - 1267","mmodes":"Metro | LRT","mn":2,"mlat":32.176667,"mlng":34.934859,"xrow":41,"xname":"הורוביץ/הפועל, כפר סבא","xmodes":"Metro | BRT","xn":2,"xrank":147,"xtype":"מטרופוליני","xlat":32.175756,"xlng":34.934926,"d":101,"eq":false},{"hub":107,"mname":"המלך ג׳ורג׳ - 1157","mmodes":"Metro | LRT","mn":2,"mlat":32.070376,"mlng":34.770633,"xrow":42,"xname":"המלך ג'ורג'/אלנבי, תל אביב","xmodes":"Metro | LRT","xn":2,"xrank":41,"xtype":"מטרופוליני","xlat":32.070245,"xlng":34.77109,"d":46,"eq":true},{"hub":200,"mname":"יצחק שמיר - 1250","mmodes":"Metro | LRT | BRT | Rail","mn":4,"mlat":32.104614,"mlng":34.863153,"xrow":43,"xname":"תחנת רכבת קרית אריה","xmodes":"Metro | LRT | Rail","xn":3,"xrank":42,"xtype":"מטרופוליני","xlat":32.105676,"xlng":34.862768,"d":123,"eq":false},{"hub":30,"mname":" - 1080","mmodes":"LRT | Rail","mn":2,"mlat":31.773954,"mlng":34.665691,"xrow":44,"xname":"תחנת רכבת אשדוד-עד הלום","xmodes":"LRT | Rail","xn":3,"xrank":43,"xtype":"מטרופוליני","xlat":31.774496,"xlng":34.66592,"d":64,"eq":true},{"hub":72,"mname":"כיכר וולפסון - 1122","mmodes":"Metro | BRT | Rail","mn":3,"mlat":32.03573,"mlng":34.759848,"xrow":46,"xname":"תחנת רכבת חולון-וולפסון","xmodes":"Metro | Rail","xn":2,"xrank":45,"xtype":"מטרופוליני","xlat":32.035316,"xlng":34.760464,"d":74,"eq":false},{"hub":424,"mname":" - 1474","mmodes":"LRT | BRT | Rail","mn":3,"mlat":32.621159,"mlng":35.293864,"xrow":50,"xname":"תחנת רכבת עפולה","xmodes":"BRT | Rail","xn":2,"xrank":49,"xtype":"מטרופוליני","xlat":32.6218,"xlng":35.294927,"d":122,"eq":false},{"hub":129,"mname":"זאב ז'בוטינסקי - 1179","mmodes":"Metro | LRT","mn":2,"mlat":31.964414,"mlng":34.799846,"xrow":51,"xname":"רוטשילד/ז'בוטינסקי, ראשון לציון","xmodes":"Metro | LRT | BRT","xn":3,"xrank":50,"xtype":"מטרופוליני","xlat":31.964223,"xlng":34.801448,"d":153,"eq":false},{"hub":128,"mname":"הרצל - 1178","mmodes":"LRT | BRT","mn":2,"mlat":31.964015,"mlng":34.803147,"xrow":51,"xname":"רוטשילד/ז'בוטינסקי, ראשון לציון","xmodes":"Metro | LRT | BRT","xn":3,"xrank":50,"xtype":"מטרופוליני","xlat":31.964223,"xlng":34.801448,"d":162,"eq":false},{"hub":70,"mname":" - 1120","mmodes":"Metro | Rail","mn":2,"mlat":32.014836,"mlng":34.76271,"xrow":53,"xname":"תחנת רכבת בת ים-יוספטל","xmodes":"Metro | Rail","xn":2,"xrank":52,"xtype":"מטרופוליני","xlat":32.01432,"xlng":34.763098,"d":68,"eq":true},{"hub":213,"mname":"ילדי תימן החטופים - 1263","mmodes":"LRT | BRT | Rail","mn":3,"mlat":32.438131,"mlng":34.89956,"xrow":54,"xname":"תחנת רכבת חדרה-מערב","xmodes":"BRT | Rail","xn":3,"xrank":53,"xtype":"ארצי","xlat":32.438207,"xlng":34.899104,"d":44,"eq":false},{"hub":149,"mname":" - 1199","mmodes":"LRT | BRT | Rail","mn":3,"mlat":31.909245,"mlng":34.805348,"xrow":56,"xname":"תחנת רכבת רחובות","xmodes":"Metro | LRT | Rail","xn":4,"xrank":55,"xtype":"ארצי","xlat":31.908497,"xlng":34.804313,"d":128,"eq":false},{"hub":148,"mname":"הרצל - 1198","mmodes":"Metro | BRT","mn":2,"mlat":31.906386,"mlng":34.806047,"xrow":56,"xname":"תחנת רכבת רחובות","xmodes":"Metro | LRT | Rail","xn":4,"xrank":55,"xtype":"ארצי","xlat":31.908497,"xlng":34.804313,"d":286,"eq":false},{"hub":164,"mname":"איילון צפון - 1214","mmodes":"LRT | Rail","mn":2,"mlat":32.163921,"mlng":34.817722,"xrow":60,"xname":"תחנת רכבת הרצליה","xmodes":"LRT | BRT | Rail","xn":4,"xrank":60,"xtype":"ארצי","xlat":32.164229,"xlng":34.818183,"d":55,"eq":false},{"hub":62,"mname":" - 1112","mmodes":"LRT | Rail","mn":2,"mlat":31.861475,"mlng":34.743293,"xrow":62,"xname":"תחנת רכבת יבנה-מזרח","xmodes":"LRT | Rail","xn":3,"xrank":62,"xtype":"מטרופוליני","xlat":31.861242,"xlng":34.744327,"d":101,"eq":true},{"hub":198,"mname":"משה דיין - 1248","mmodes":"Metro | LRT","mn":2,"mlat":32.096135,"mlng":34.861423,"xrow":63,"xname":"גיסין/משה דיין, פתח תקווה","xmodes":"Metro | LRT | BRT","xn":3,"xrank":63,"xtype":"מטרופוליני","xlat":32.09636,"xlng":34.861428,"d":25,"eq":false},{"hub":127,"mname":"412 - 1177","mmodes":"Metro | BRT | Rail","mn":3,"mlat":31.949194,"mlng":34.801999,"xrow":65,"xname":"תחנת רכבת הראשונים","xmodes":"Metro | Rail","xn":2,"xrank":65,"xtype":"מטרופוליני","xlat":31.949326,"xlng":34.801969,"d":15,"eq":false},{"hub":66,"mname":" - 1116","mmodes":"LRT | BRT | Rail","mn":3,"mlat":31.987776,"mlng":34.757874,"xrow":68,"xname":"תחנת רכבת משה דיין","xmodes":"LRT | Rail","xn":2,"xrank":68,"xtype":"מטרופוליני","xlat":31.988071,"xlng":34.758031,"d":36,"eq":false},{"hub":163,"mname":"שדרות אבא אבן - 1213","mmodes":"Metro | LRT","mn":2,"mlat":32.163301,"mlng":34.806076,"xrow":70,"xname":"אבא אבן/נעמי שמר, הרצליה","xmodes":"Metro | LRT | BRT","xn":3,"xrank":70,"xtype":"מטרופוליני","xlat":32.163197,"xlng":34.806337,"d":27,"eq":false},{"hub":425,"mname":"כיכר המוסכים - 1475","mmodes":"LRT | BRT","mn":2,"mlat":32.693699,"mlng":35.299126,"xrow":71,"xname":"כיכר המוסכים, נצרת","xmodes":"LRT | BRT","xn":2,"xrank":72,"xtype":"עירוני","xlat":32.693332,"xlng":35.299463,"d":52,"eq":true},{"hub":196,"mname":"העצמאות - 1246","mmodes":"Metro | LRT","mn":2,"mlat":32.073422,"mlng":34.860357,"xrow":73,"xname":"כיכר יפה נוף, פתח תקווה","xmodes":"Metro | LRT","xn":2,"xrank":74,"xtype":"מטרופוליני","xlat":32.073313,"xlng":34.860312,"d":13,"eq":true},{"hub":168,"mname":" - 1218","mmodes":"Metro | Rail","mn":2,"mlat":31.938488,"mlng":34.842479,"xrow":74,"xname":"נווה דורון, רמלה","xmodes":"Metro | BRT","xn":2,"xrank":133,"xtype":"עירוני","xlat":31.93618,"xlng":34.842636,"d":256,"eq":false},{"hub":71,"mname":"יוספטל - 1121","mmodes":"Metro | LRT","mn":2,"mlat":32.015424,"mlng":34.753267,"xrow":75,"xname":"ניסנבאום/יוספטל, בת ים","xmodes":"Metro | LRT","xn":2,"xrank":76,"xtype":"מטרופוליני","xlat":32.015543,"xlng":34.753372,"d":17,"eq":true},{"hub":65,"mname":" - 1115","mmodes":"LRT | Rail","mn":2,"mlat":31.890877,"mlng":34.731737,"xrow":80,"xname":"תחנת רכבת יבנה-מערב","xmodes":"LRT | Rail","xn":2,"xrank":81,"xtype":"מטרופוליני","xlat":31.890308,"xlng":34.731216,"d":80,"eq":true},{"hub":292,"mname":" - 1342","mmodes":"Metro | BRT","mn":2,"mlat":32.810735,"mlng":35.070347,"xrow":83,"xname":"מחלף קרית אתא דרום","xmodes":"LRT | BRT","xn":2,"xrank":84,"xtype":"עירוני","xlat":32.808272,"xlng":35.073088,"d":375,"eq":false},{"hub":131,"mname":"המלאכה - 1181","mmodes":"Metro | LRT","mn":2,"mlat":32.010573,"mlng":34.795264,"xrow":87,"xname":"המלאכה/הרוקמים, חולון","xmodes":"Metro | LRT | BRT","xn":3,"xrank":89,"xtype":"מטרופוליני","xlat":32.01086,"xlng":34.795044,"d":38,"eq":false},{"hub":197,"mname":"זאב ז'בוטינסקי - 1247","mmodes":"LRT | BRT","mn":2,"mlat":32.091473,"mlng":34.866593,"xrow":92,"xname":"בית חולים בילינסון","xmodes":"Metro | LRT","xn":2,"xrank":94,"xtype":"מטרופוליני","xlat":32.08856,"xlng":34.866423,"d":323,"eq":false},{"hub":94,"mname":"שדרות מנחם בגין - 1144","mmodes":"Metro | LRT","mn":2,"mlat":32.004941,"mlng":34.774342,"xrow":96,"xname":"אהוד מנור/בגין, חולון","xmodes":"Metro | LRT","xn":2,"xrank":99,"xtype":"מטרופוליני","xlat":32.005199,"xlng":34.775258,"d":91,"eq":true},{"hub":202,"mname":"כביש גהה - 1252","mmodes":"LRT | BRT | Rail","mn":3,"mlat":32.173282,"mlng":34.886295,"xrow":98,"xname":"תחנת רכבת רעננה דרום","xmodes":"LRT | BRT | Rail","xn":3,"xrank":101,"xtype":"מטרופוליני","xlat":32.172811,"xlng":34.886843,"d":73,"eq":true},{"hub":193,"mname":"יצחק שדה - 1243","mmodes":"Metro | Rail","mn":2,"mlat":31.92851,"mlng":34.876755,"xrow":101,"xname":"תחנת רכבת רמלה","xmodes":"Metro | LRT | BRT | Rail","xn":5,"xrank":104,"xtype":"ארצי","xlat":31.927882,"xlng":34.876557,"d":72,"eq":false},{"hub":95,"mname":"אליעזר הופין - 1145","mmodes":"Metro | LRT","mn":2,"mlat":32.013457,"mlng":34.774348,"xrow":102,"xname":"HIT חולון","xmodes":"Metro | LRT","xn":2,"xrank":105,"xtype":"מטרופוליני","xlat":32.013489,"xlng":34.774727,"d":36,"eq":true},{"hub":42,"mname":" - 1092","mmodes":"LRT | BRT","mn":2,"mlat":31.819623,"mlng":34.662971,"xrow":112,"xname":"היהלומים/הבנאים, אשדוד","xmodes":"LRT | BRT","xn":2,"xrank":115,"xtype":"עירוני","xlat":31.820833,"xlng":34.662051,"d":160,"eq":true},{"hub":57,"mname":"המדע - 1107","mmodes":"LRT | BRT","mn":2,"mlat":31.828541,"mlng":34.670986,"xrow":115,"xname":"צומת בני ברית","xmodes":"LRT | BRT","xn":2,"xrank":118,"xtype":"עירוני","xlat":31.827802,"xlng":34.671019,"d":82,"eq":true},{"hub":184,"mname":"בן גוריון - 1234","mmodes":"Metro | LRT","mn":2,"mlat":32.16676,"mlng":34.84279,"xrow":117,"xname":"בן גוריון/סוקולוב, הרצליה","xmodes":"Metro | BRT","xn":2,"xrank":120,"xtype":"מטרופוליני","xlat":32.167229,"xlng":34.84278,"d":52,"eq":false},{"hub":172,"mname":"יגאל אלון - 1222","mmodes":"Metro | LRT","mn":2,"mlat":32.034335,"mlng":34.853632,"xrow":118,"xname":"צומת נווה סביון","xmodes":"Metro | LRT","xn":2,"xrank":121,"xtype":"מטרופוליני","xlat":32.03315,"xlng":34.854493,"d":155,"eq":true},{"hub":169,"mname":" - 1219","mmodes":"LRT | BRT","mn":2,"mlat":31.969259,"mlng":34.844003,"xrow":122,"xname":"אסף הרופא","xmodes":"Metro | LRT | BRT","xn":3,"xrank":125,"xtype":"מטרופוליני","xlat":31.968736,"xlng":34.841431,"d":250,"eq":false},{"hub":215,"mname":"הרב עובדיה יוסף - 1265","mmodes":"Metro | LRT","mn":2,"mlat":32.082694,"mlng":34.903178,"xrow":124,"xname":"צומת סירקין","xmodes":"Metro | BRT","xn":2,"xrank":127,"xtype":"מטרופוליני","xlat":32.083233,"xlng":34.903417,"d":64,"eq":false},{"hub":150,"mname":"שדרות הציונות - 1200","mmodes":"Metro | BRT","mn":2,"mlat":31.98084,"mlng":34.808804,"xrow":126,"xname":"המכבים/הציונות, ראשל\"צ","xmodes":"Metro | BRT","xn":2,"xrank":143,"xtype":"מטרופוליני","xlat":31.980871,"xlng":34.807671,"d":107,"eq":true},{"hub":194,"mname":" - 1244","mmodes":"Metro | Rail | Rail fast","mn":3,"mlat":32.001056,"mlng":34.869874,"xrow":128,"xname":"נמל התעופה בן גוריון","xmodes":"LRT | Rail | Rail fast","xn":4,"xrank":131,"xtype":"ארצי","xlat":32.000821,"xlng":34.870033,"d":30,"eq":false},{"hub":381,"mname":"דוד רמז - 1431","mmodes":"LRT | Rail","mn":2,"mlat":31.767865,"mlng":35.224218,"xrow":130,"xname":"תחנת רכבת ירושלים-החאן","xmodes":"LRT | Rail","xn":2,"xrank":7,"xtype":"מטרופוליני","xlat":31.76785,"xlng":35.224146,"d":7,"eq":true},{"hub":9,"mname":"דוד בן גוריון - 1059","mmodes":"LRT | BRT","mn":2,"mlat":31.659528,"mlng":34.594231,"xrow":133,"xname":"בן גוריון/התעשייה, אשקלון","xmodes":"LRT | BRT","xn":2,"xrank":128,"xtype":"עירוני","xlat":31.659962,"xlng":34.595313,"d":113,"eq":true},{"hub":7,"mname":" - 1057","mmodes":"LRT | BRT","mn":2,"mlat":31.650577,"mlng":34.571054,"xrow":135,"xname":"יצחק רבין/עמק יזרעאל, אשקלון","xmodes":"LRT | BRT","xn":2,"xrank":110,"xtype":"עירוני","xlat":31.651648,"xlng":34.572121,"d":156,"eq":true},{"hub":3,"mname":"אליעזר בן יהודה - 1053","mmodes":"LRT | BRT","mn":2,"mlat":31.640174,"mlng":34.548159,"xrow":141,"xname":"א.ת דרום, אשקלון","xmodes":"LRT | BRT","xn":2,"xrank":123,"xtype":"עירוני","xlat":31.639445,"xlng":34.547903,"d":84,"eq":true}], ONLYX = [{"xrow":11,"xname":"רייך/לנטוס, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":10,"xtype":"Not Hub","lat":32.29442,"lng":34.870145,"d":2818,"near":"כביש חיפה רעננה - 1257"},{"xrow":13,"xname":"ליבר/לנטוס, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":12,"xtype":"Not Hub","lat":32.30084,"lng":34.871027,"d":2123,"near":" - 1261"},{"xrow":14,"xname":"תחנת רכבת השלום","xmodes":"Metro | Rail","xn":3,"xrank":13,"xtype":"ארצי","lat":32.072633,"lng":34.794529,"d":1166,"near":" - 1184"},{"xrow":16,"xname":"קלאוזנר/לנטוס, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":15,"xtype":"Not Hub","lat":32.305938,"lng":34.870705,"d":1557,"near":" - 1261"},{"xrow":21,"xname":"השוק הסיטונאי, תל אביב","xmodes":"Metro | LRT","xn":2,"xrank":20,"xtype":"מטרופוליני","lat":32.06714,"lng":34.784586,"d":1124,"near":"יהודה הלוי - 1155"},{"xrow":22,"xname":"כיכר האחדות, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":21,"xtype":"Not Hub","lat":32.312015,"lng":34.870965,"d":889,"near":" - 1261"},{"xrow":23,"xname":"תחנה מרכזית חדשה, ראשון לציון","xmodes":"LRT | BRT","xn":2,"xrank":22,"xtype":"עירוני","lat":31.966412,"lng":34.786311,"d":1298,"near":"זאב ז'בוטינסקי - 1179"},{"xrow":27,"xname":"איקאה, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":26,"xtype":"Not Hub","lat":32.273765,"lng":34.858564,"d":3691,"near":"כביש חיפה רעננה - 1256"},{"xrow":29,"xname":"גיבורי ישראל/התרופה, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":28,"xtype":"Not Hub","lat":32.281343,"lng":34.861951,"d":3269,"near":"כביש חיפה רעננה - 1257"},{"xrow":31,"xname":"תחנת רכבת קרית מוצקין","xmodes":"Rail | Rail fast","xn":2,"xrank":30,"xtype":"מטרופוליני","lat":32.833678,"lng":35.070227,"d":1164,"near":"שדרות אח\"י אילת - 1346"},{"xrow":33,"xname":"תחנת רכבת נהריה","xmodes":"Rail | Rail fast","xn":2,"xrank":32,"xtype":"מטרופוליני","lat":33.005431,"lng":35.098505,"d":8727,"near":"דוד רמז - 1364"},{"xrow":34,"xname":"התדהר/התעשייה, רעננה","xmodes":"Metro | BRT","xn":2,"xrank":40,"xtype":"מטרופוליני","lat":32.19759,"lng":34.883135,"d":732,"near":"עקיבא - 1255"},{"xrow":39,"xname":"לבון/בן גוריון, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":38,"xtype":"Not Hub","lat":32.279003,"lng":34.850499,"d":4363,"near":"כביש חיפה רעננה - 1257"},{"xrow":40,"xname":"בית אדר, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":39,"xtype":"Not Hub","lat":32.278109,"lng":34.860867,"d":3404,"near":"כביש חיפה רעננה - 1257"},{"xrow":45,"xname":"העצמאות/העלייה, כפר יונה","xmodes":"LRT | BRT","xn":2,"xrank":44,"xtype":"Not Hub","lat":32.321434,"lng":34.927732,"d":2214,"near":" - 1270"},{"xrow":47,"xname":"תחנת רכבת קיסריה-פרדס חנה","xmodes":"BRT | Rail","xn":2,"xrank":46,"xtype":"מטרופוליני","lat":32.485508,"lng":34.95421,"d":4039,"near":"65 - 1278"},{"xrow":48,"xname":"צומת טייבה","xmodes":"LRT | BRT","xn":2,"xrank":47,"xtype":"Not Hub","lat":32.271787,"lng":35.00297,"d":10091,"near":"כביש חיפה רעננה - 1257"},{"xrow":49,"xname":"תחנת רכבת אחיהוד","xmodes":"LRT | Rail","xn":3,"xrank":48,"xtype":"מטרופוליני","lat":32.911344,"lng":35.173553,"d":8685,"near":"דוד רמז - 1364"},{"xrow":52,"xname":"בן גוריון/כביש 57, כפר יונה","xmodes":"LRT | BRT","xn":2,"xrank":51,"xtype":"Not Hub","lat":32.320532,"lng":34.938099,"d":3196,"near":" - 1270"},{"xrow":55,"xname":"מגדל המים, טירה","xmodes":"LRT | BRT","xn":2,"xrank":54,"xtype":"Not Hub","lat":32.23024,"lng":34.948899,"d":6087,"near":"אלי הורביץ - 1267"},{"xrow":57,"xname":"שיח מסעוד, טייבה","xmodes":"LRT | BRT","xn":2,"xrank":56,"xtype":"Not Hub","lat":32.261409,"lng":34.998462,"d":9878,"near":"כביש חיפה רעננה - 1257"},{"xrow":58,"xname":"רוטשילד/רמז, ראשון לציון","xmodes":"LRT | BRT","xn":2,"xrank":57,"xtype":"עירוני","lat":31.964745,"lng":34.792845,"d":663,"near":"זאב ז'בוטינסקי - 1179"},{"xrow":59,"xname":"תחנת רכבת לוד-גני אביב","xmodes":"Metro | BRT | Rail","xn":3,"xrank":59,"xtype":"מטרופוליני","lat":31.967612,"lng":34.879194,"d":3332,"near":" - 1219"},{"xrow":61,"xname":"צומת גנות הדר","xmodes":"LRT | BRT","xn":2,"xrank":61,"xtype":"Not Hub","lat":32.324227,"lng":34.899199,"d":492,"near":" - 1270"},{"xrow":64,"xname":"אורט הרמלין, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":64,"xtype":"Not Hub","lat":32.291044,"lng":34.865203,"d":3104,"near":"כביש חיפה רעננה - 1257"},{"xrow":66,"xname":"משה שרת/גולד מאיר, רמלה","xmodes":"Metro | BRT","xn":2,"xrank":140,"xtype":"מטרופוליני","lat":31.934755,"lng":34.855573,"d":1306,"near":" - 1218"},{"xrow":67,"xname":"צומת בית ברל","xmodes":"LRT | BRT","xn":2,"xrank":67,"xtype":"Not Hub","lat":32.200293,"lng":34.916012,"d":2740,"near":"כביש חיפה רעננה - 1254"},{"xrow":69,"xname":"תחנת רכבת בית יהושוע","xmodes":"LRT | Rail","xn":2,"xrank":69,"xtype":"מטרופוליני","lat":32.262766,"lng":34.86055,"d":2994,"near":"כביש חיפה רעננה - 1256"},{"xrow":72,"xname":"תע\"ש השרון - מזרח","xmodes":"Metro | BRT","xn":2,"xrank":73,"xtype":"מטרופוליני","lat":32.146619,"lng":34.86404,"d":3001,"near":"בן גוריון - 1234"},{"xrow":76,"xname":"אהוד מנור/שוש עטרי, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":77,"xtype":"Not Hub","lat":32.273523,"lng":34.840536,"d":5176,"near":"כביש חיפה רעננה - 1256"},{"xrow":77,"xname":"מועצה מקומית קלנסוואה","xmodes":"LRT | BRT","xn":2,"xrank":78,"xtype":"Not Hub","lat":32.282516,"lng":34.981699,"d":8009,"near":"כביש חיפה רעננה - 1269"},{"xrow":78,"xname":"המחקר/המסגר, לוד","xmodes":"Metro | BRT","xn":2,"xrank":136,"xtype":"מטרופוליני","lat":31.964956,"lng":34.893493,"d":4340,"near":"יצחק שדה - 1243"},{"xrow":79,"xname":"יצחק רבין/מנחם בגין, קרית אתא","xmodes":"LRT | BRT","xn":2,"xrank":80,"xtype":"עירוני","lat":32.819832,"lng":35.11378,"d":1062,"near":"שדרות יוספטל - 1376"},{"xrow":81,"xname":"פנקס/המסגר, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":82,"xtype":"Not Hub","lat":32.32142,"lng":34.874882,"d":529,"near":" - 1261"},{"xrow":82,"xname":"הארד/ולנברג, תל אביב","xmodes":"Metro | LRT","xn":2,"xrank":83,"xtype":"מטרופוליני","lat":32.110889,"lng":34.83992,"d":1221,"near":" - 1231"},{"xrow":84,"xname":"תחנת רכבת כפר ברוך","xmodes":"BRT | Rail","xn":2,"xrank":85,"xtype":"מטרופוליני","lat":32.647986,"lng":35.208849,"d":8465,"near":"66 - 1426"},{"xrow":85,"xname":"תחנת רכבת רמלה-דרום","xmodes":"LRT | Rail","xn":2,"xrank":86,"xtype":"מטרופוליני","lat":31.917045,"lng":34.860544,"d":1992,"near":"יצחק שדה - 1243"},{"xrow":86,"xname":"בן יהודה/טשרניחובסקי, כפר סבא","xmodes":"LRT | BRT","xn":2,"xrank":87,"xtype":"עירוני","lat":32.187121,"lng":34.905253,"d":1610,"near":"כביש חיפה רעננה - 1254"},{"xrow":88,"xname":"תחנת רכבת אלעד","xmodes":"BRT | Rail","xn":2,"xrank":90,"xtype":"עירוני","lat":32.062608,"lng":34.932997,"d":3590,"near":"הרב עובדיה יוסף - 1265"},{"xrow":89,"xname":"בר אילן/ויצמן, רמלה","xmodes":"Metro | BRT","xn":2,"xrank":144,"xtype":"מטרופוליני","lat":31.930338,"lng":34.865485,"d":1085,"near":"יצחק שדה - 1243"},{"xrow":90,"xname":"אצטדיון קרית אתא","xmodes":"LRT | BRT","xn":2,"xrank":92,"xtype":"עירוני","lat":32.816776,"lng":35.108145,"d":955,"near":"שדרות יוספטל - 1376"},{"xrow":91,"xname":"כביש 57/דרך דגניה, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":93,"xtype":"עירוני","lat":32.323599,"lng":34.88205,"d":1246,"near":" - 1261"},{"xrow":93,"xname":"השומר/ירושלים, ראשון לציון","xmodes":"LRT | BRT","xn":2,"xrank":95,"xtype":"עירוני","lat":31.96272,"lng":34.817824,"d":1395,"near":"הרצל - 1178"},{"xrow":94,"xname":"פנקס/האורג, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":97,"xtype":"Not Hub","lat":32.318872,"lng":34.875043,"d":532,"near":" - 1261"},{"xrow":95,"xname":"צומת טירה","xmodes":"LRT | BRT","xn":2,"xrank":98,"xtype":"Not Hub","lat":32.232819,"lng":34.984786,"d":7806,"near":"אלי הורביץ - 1267"},{"xrow":97,"xname":"הרצוג/צריפין","xmodes":"Metro | BRT","xn":2,"xrank":79,"xtype":"עירוני","lat":31.970961,"lng":34.832723,"d":1083,"near":" - 1219"},{"xrow":99,"xname":"ברקאי/חריש","xmodes":"BRT | Rail","xn":2,"xrank":102,"xtype":"מטרופוליני","lat":32.471721,"lng":35.033778,"d":2155,"near":"65 - 1311"},{"xrow":100,"xname":"קלאוזנר/ירושלים, ראשון לציון","xmodes":"LRT | BRT","xn":2,"xrank":103,"xtype":"עירוני","lat":31.961641,"lng":34.823033,"d":1898,"near":"הרצל - 1178"},{"xrow":103,"xname":"שדרות ירושלים/הרמ\"א, רמלה","xmodes":"Metro | LRT | BRT","xn":3,"xrank":106,"xtype":"מטרופוליני","lat":31.938277,"lng":34.886606,"d":1429,"near":"יצחק שדה - 1243"},{"xrow":104,"xname":"בכור שטרית/רוקח, תל אביב","xmodes":"LRT | BRT","xn":2,"xrank":107,"xtype":"עירוני","lat":32.106094,"lng":34.814485,"d":924,"near":"איילון צפון - 1209"},{"xrow":105,"xname":"אבא הלל סילבר/מבצע יונתן","xmodes":"Metro | LRT | BRT","xn":3,"xrank":108,"xtype":"מטרופוליני","lat":31.958724,"lng":34.897738,"d":3894,"near":"יצחק שדה - 1243"},{"xrow":106,"xname":"תחנת רכבת טייבה","xmodes":"LRT | BRT","xn":2,"xrank":109,"xtype":"Not Hub","lat":32.276515,"lng":34.992375,"d":9046,"near":"כביש חיפה רעננה - 1257"},{"xrow":107,"xname":"פרידמן/בורג, ראשל\"צ","xmodes":"Metro | BRT","xn":2,"xrank":145,"xtype":"מטרופוליני","lat":31.971845,"lng":34.822385,"d":1626,"near":"שדרות הציונות - 1200"},{"xrow":108,"xname":"הגביש/טרומן, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":111,"xtype":"עירוני","lat":32.287126,"lng":34.862873,"d":3218,"near":"כביש חיפה רעננה - 1257"},{"xrow":109,"xname":"לוי אשכול/וולך, קרית אונו","xmodes":"Metro | LRT","xn":2,"xrank":112,"xtype":"מטרופוליני","lat":32.060315,"lng":34.863063,"d":1476,"near":"העצמאות - 1246"},{"xrow":110,"xname":"צומת צור נתן","xmodes":"LRT | BRT","xn":2,"xrank":113,"xtype":"Not Hub","lat":32.24065,"lng":34.98945,"d":8765,"near":"אלי הורביץ - 1267"},{"xrow":111,"xname":"מגדיאל/רמתיים, הוד השרון","xmodes":"Metro | LRT","xn":2,"xrank":114,"xtype":"מטרופוליני","lat":32.15669,"lng":34.894295,"d":1664,"near":"531 - 1266"},{"xrow":113,"xname":"תל השומר, אונקולוגיה","xmodes":"Metro | LRT","xn":2,"xrank":116,"xtype":"מטרופוליני","lat":32.045611,"lng":34.845989,"d":1444,"near":"יגאל אלון - 1222"},{"xrow":114,"xname":"קניון לוד","xmodes":"Metro | LRT | BRT","xn":3,"xrank":117,"xtype":"מטרופוליני","lat":31.94573,"lng":34.892132,"d":2400,"near":"יצחק שדה - 1243"},{"xrow":116,"xname":"צומת בארותיים","xmodes":"LRT | BRT","xn":2,"xrank":119,"xtype":"Not Hub","lat":32.31269,"lng":34.986264,"d":7806,"near":" - 1270"},{"xrow":119,"xname":"הנוריות, ראשון לציון","xmodes":"LRT | BRT","xn":2,"xrank":122,"xtype":"עירוני","lat":31.96478,"lng":34.829902,"d":1422,"near":" - 1219"},{"xrow":120,"xname":"צריפין מרכז","xmodes":"Metro | BRT","xn":2,"xrank":139,"xtype":"מטרופוליני","lat":31.960413,"lng":34.841102,"d":1019,"near":" - 1219"},{"xrow":121,"xname":"כביש 57/פנקס, נתניה","xmodes":"LRT | BRT","xn":2,"xrank":124,"xtype":"עירוני","lat":32.324654,"lng":34.875966,"d":800,"near":" - 1261"},{"xrow":123,"xname":"צומת תנובות","xmodes":"LRT | BRT","xn":2,"xrank":126,"xtype":"Not Hub","lat":32.31509,"lng":34.964212,"d":5714,"near":" - 1270"},{"xrow":125,"xname":"צריפין דרום","xmodes":"Metro | BRT","xn":2,"xrank":129,"xtype":"מטרופוליני","lat":31.948934,"lng":34.841829,"d":1160,"near":" - 1218"},{"xrow":127,"xname":"המחתרות, הוד השרון","xmodes":"Metro | BRT","xn":2,"xrank":130,"xtype":"מטרופוליני","lat":32.145233,"lng":34.878285,"d":3201,"near":"כביש גהה - 1252"},{"xrow":129,"xname":"צומת רמת הכובש","xmodes":"LRT | BRT","xn":2,"xrank":132,"xtype":"Not Hub","lat":32.22085,"lng":34.936611,"d":4902,"near":"אלי הורביץ - 1267"},{"xrow":131,"xname":"ירקונה/רמתיים, הוד השרון","xmodes":"Metro | LRT | BRT","xn":3,"xrank":134,"xtype":"מטרופוליני","lat":32.145216,"lng":34.895017,"d":2855,"near":"531 - 1266"},{"xrow":132,"xname":"קרית חינוך יצחק נבון, ראשון לציון","xmodes":"LRT | BRT","xn":2,"xrank":135,"xtype":"עירוני","lat":31.96115,"lng":34.826919,"d":1848,"near":" - 1219"},{"xrow":134,"xname":"אבא הלל סילבר/נדא, לוד","xmodes":"Metro | LRT | BRT","xn":3,"xrank":138,"xtype":"מטרופוליני","lat":31.962206,"lng":34.899661,"d":4319,"near":"יצחק שדה - 1243"},{"xrow":136,"xname":"מנחם בגין/אקסודוס, אשקלון","xmodes":"LRT | BRT","xn":2,"xrank":91,"xtype":"עירוני","lat":31.673985,"lng":34.586052,"d":1394,"near":"דוד בן גוריון - 1063"},{"xrow":137,"xname":"תע\"ש השרון - מערב","xmodes":"Metro | BRT","xn":2,"xrank":141,"xtype":"מטרופוליני","lat":32.148785,"lng":34.853605,"d":2239,"near":"בן גוריון - 1234"},{"xrow":138,"xname":"שלמה המלך/נחל גמלא, קרית אונו","xmodes":"Metro | LRT","xn":2,"xrank":142,"xtype":"מטרופוליני","lat":32.053649,"lng":34.855768,"d":1331,"near":"יצחק נבון - 1224"},{"xrow":139,"xname":"מנחם בגין/הבוצרים, אשקלון","xmodes":"LRT | BRT","xn":2,"xrank":100,"xtype":"עירוני","lat":31.676853,"lng":34.593564,"d":975,"near":"המיל השלישי - 1070"},{"xrow":140,"xname":"יצחק רבין/מנחם בגין, אשקלון","xmodes":"LRT | BRT","xn":2,"xrank":75,"xtype":"עירוני","lat":31.676171,"lng":34.576924,"d":1654,"near":"דוד בן גוריון - 1061"},{"xrow":142,"xname":"תיכון הדרים, הוד השרון","xmodes":"Metro | BRT","xn":2,"xrank":146,"xtype":"מטרופוליני","lat":32.143751,"lng":34.889962,"d":3147,"near":"531 - 1266"},{"xrow":143,"xname":"תחנת רכבת קרית גת","xmodes":"BRT | Rail","xn":3,"xrank":33,"xtype":"מטרופוליני","lat":31.604581,"lng":34.777105,"d":16357,"near":" - 1189"}], ONLYM = [{"hub":31,"mname":"חיים הרצוג - 1081","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.776329,"lng":34.662012,"d":422,"near":"תחנת רכבת אשדוד-עד הלום"},{"hub":115,"mname":"שדרות דוד בן גוריון - 1165","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.260881,"lng":34.804702,"d":422,"near":"תחנת רכבת באר שבע צפון-האוניברסיטה"},{"hub":112,"mname":"שדרות יצחק רגר - 1162","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.246118,"lng":34.796691,"d":436,"near":"תחנת רכבת באר שבע מרכז"},{"hub":276,"mname":" - 1326","mmodes":"Rail | BRT","mn":2,"status":"Operating","lat":32.821991,"lng":34.996137,"d":458,"near":"קרית הממשלה, חיפה"},{"hub":254,"mname":"תל אביב - 1304","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.82646,"lng":34.984119,"d":477,"near":"תחנת רכבת בת גלים"},{"hub":158,"mname":"בן גוריון - 1208","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.095606,"lng":34.821597,"d":523,"near":"מרכז דן, בני ברק"},{"hub":271,"mname":"יחיאל - 1321","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.808687,"lng":35.000431,"d":544,"near":"חיפה מזרח"},{"hub":10,"mname":"דוד בן גוריון - 1060","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.660411,"lng":34.589365,"d":566,"near":"בן גוריון/התעשייה, אשקלון"},{"hub":368,"mname":"השופט מאיר שמגר - 1418","mmodes":"Metro | LRT","mn":2,"status":"Detailed","lat":31.78135,"lng":35.202407,"d":627,"near":"תחנת רכבת ירושלים-יצחק נבון"},{"hub":55,"mname":"בני ברית - 1105","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.819238,"lng":34.66891,"d":673,"near":"היהלומים/הבנאים, אשדוד"},{"hub":222,"mname":"דוד שמעוני - 1272","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.439529,"lng":34.906296,"d":692,"near":"תחנת רכבת חדרה-מערב"},{"hub":273,"mname":"מטרונית - 1323","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.812714,"lng":34.996442,"d":731,"near":"קרית הממשלה, חיפה"},{"hub":205,"mname":"עקיבא - 1255","mmodes":"Metro | LRT","mn":2,"status":"Strategic","lat":32.191033,"lng":34.884021,"d":732,"near":"התדהר/התעשייה, רעננה"},{"hub":98,"mname":"בן צבי - 1148","mmodes":"LRT | BRT","mn":2,"status":"Detailed","lat":32.042719,"lng":34.771405,"d":747,"near":"תחנת רכבת צומת חולון"},{"hub":177,"mname":"בן גוריון - 1227","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.083894,"lng":34.82156,"d":812,"near":"מרכז דן, בני ברק"},{"hub":253,"mname":"שדרות דוד בן גוריון - 1303","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.822651,"lng":34.991894,"d":813,"near":"קרית הממשלה, חיפה"},{"hub":41,"mname":"בני ברית - 1091","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.814332,"lng":34.666514,"d":836,"near":"היהלומים/הבנאים, אשדוד"},{"hub":204,"mname":"כביש חיפה רעננה - 1254","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.191354,"lng":34.888925,"d":881,"near":"התדהר/התעשייה, רעננה"},{"hub":287,"mname":"שדרות ההסתדרות - 1337","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.799585,"lng":35.049521,"d":897,"near":"חוצות המפרץ"},{"hub":105,"mname":"יהודה הלוי - 1155","mmodes":"Metro | LRT","mn":2,"status":"Operating","lat":32.062517,"lng":34.77399,"d":900,"near":"המלך ג'ורג'/אלנבי, תל אביב"},{"hub":100,"mname":"2 - 1150","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.046112,"lng":34.783178,"d":908,"near":"תחנת רכבת תל אביב ההגנה"},{"hub":269,"mname":"הנגיד - 1319","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.803545,"lng":35.010237,"d":920,"near":"חיפה מזרח"},{"hub":326,"mname":"שדרות יוספטל - 1376","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.810304,"lng":35.11487,"d":955,"near":"אצטדיון קרית אתא"},{"hub":179,"mname":"דרך ששת הימים - 1229","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.098779,"lng":34.827722,"d":956,"near":"מרכז דן, בני ברק"},{"hub":137,"mname":"שדרות יעקב גרשפלד - 1187","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.253489,"lng":34.814399,"d":965,"near":"תחנת רכבת באר שבע צפון-האוניברסיטה"},{"hub":113,"mname":"המשחררים - 1163","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.250828,"lng":34.798375,"d":968,"near":"תחנת רכבת באר שבע מרכז"},{"hub":20,"mname":"המיל השלישי - 1070","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.685246,"lng":34.596634,"d":975,"near":"מנחם בגין/הבוצרים, אשקלון"},{"hub":388,"mname":"הנביאים - 1438","mmodes":"Metro | LRT","mn":2,"status":"Operating","lat":31.782184,"lng":35.228389,"d":976,"near":"תחנת רכבת ירושלים-מרכז"},{"hub":199,"mname":"אבשלום גיסין - 1249","mmodes":"LRT | BRT","mn":2,"status":"Detailed","lat":32.099523,"lng":34.871191,"d":986,"near":"גיסין/משה דיין, פתח תקווה"},{"hub":17,"mname":" - 1067","mmodes":"Rail | LRT","mn":2,"status":"Operating","lat":31.676242,"lng":34.604262,"d":1017,"near":"מנחם בגין/הבוצרים, אשקלון"},{"hub":19,"mname":"המיל השלישי - 1069","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.683991,"lng":34.60033,"d":1019,"near":"מנחם בגין/הבוצרים, אשקלון"},{"hub":306,"mname":" - 1356","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.850358,"lng":35.091972,"d":1033,"near":"מרכזית הקריות"},{"hub":99,"mname":"היינריך היינה - 1149","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.044489,"lng":34.762573,"d":1036,"near":"תחנת רכבת חולון-וולפסון"},{"hub":114,"mname":"שדרות יצחק רגר - 1164","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.258496,"lng":34.798283,"d":1068,"near":"תחנת רכבת באר שבע צפון-האוניברסיטה"},{"hub":13,"mname":"דוד בן גוריון - 1063","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.661515,"lng":34.584191,"d":1069,"near":"בן גוריון/התעשייה, אשקלון"},{"hub":231,"mname":"פנחס ואברהם רוטנברג - 1281","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.785114,"lng":34.9634,"d":1080,"near":"מרכזית חוף הכרמל"},{"hub":12,"mname":"דוד בן גוריון - 1062","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.661431,"lng":34.573386,"d":1091,"near":"יצחק רבין/עמק יזרעאל, אשקלון"},{"hub":216,"mname":"531 - 1266","mmodes":"Rail | LRT","mn":2,"status":"Operating","lat":32.17034,"lng":34.901632,"d":1116,"near":"ויצמן/טשרניחובסקי, כפר סבא"},{"hub":296,"mname":"שדרות אח\"י אילת - 1346","mmodes":"Rail | BRT","mn":2,"status":"Operating","lat":32.824735,"lng":35.063725,"d":1164,"near":"תחנת רכבת קרית מוצקין"},{"hub":11,"mname":"דוד בן גוריון - 1061","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.661272,"lng":34.57768,"d":1190,"near":"יצחק רבין/עמק יזרעאל, אשקלון"},{"hub":224,"mname":"שדרות החרות - 1274","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.441918,"lng":34.911319,"d":1220,"near":"תחנת רכבת חדרה-מערב"},{"hub":181,"mname":" - 1231","mmodes":"LRT | BRT","mn":2,"status":"Detailed","lat":32.106679,"lng":34.827964,"d":1221,"near":"הארד/ולנברג, תל אביב"},{"hub":130,"mname":"4 - 1180","mmodes":"Metro | LRT","mn":2,"status":"Strategic","lat":31.983114,"lng":34.794802,"d":1241,"near":"המכבים/הציונות, ראשל\"צ"},{"hub":295,"mname":" - 1345","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.819673,"lng":35.073007,"d":1264,"near":"מחלף קרית אתא דרום"},{"hub":14,"mname":"דוד בן גוריון - 1064","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.662811,"lng":34.568606,"d":1282,"near":"יצחק רבין/עמק יזרעאל, אשקלון"},{"hub":58,"mname":" - 1108","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.829196,"lng":34.684499,"d":1286,"near":"צומת בני ברית"},{"hub":174,"mname":"יצחק נבון - 1224","mmodes":"Metro | LRT","mn":2,"status":"Detailed","lat":32.062065,"lng":34.845718,"d":1331,"near":"שלמה המלך/נחל גמלא, קרית אונו"},{"hub":323,"mname":"זבולון - 1373","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.805607,"lng":35.102918,"d":1332,"near":"אצטדיון קרית אתא"},{"hub":303,"mname":"עכו - חיפה - 1353","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.835856,"lng":35.084521,"d":1360,"near":"תחנת רכבת קרית מוצקין"},{"hub":180,"mname":"כביש גהה - 1230","mmodes":"Metro | LRT","mn":2,"status":"Operating","lat":32.099557,"lng":34.847431,"d":1368,"near":"גיסין/משה דיין, פתח תקווה"},{"hub":380,"mname":" - 1430","mmodes":"Metro | LRT","mn":2,"status":"Detailed","lat":31.75842,"lng":35.214752,"d":1373,"near":"תחנת רכבת ירושלים-החאן"},{"hub":132,"mname":"ההגנה - 1182","mmodes":"LRT | BRT","mn":2,"status":"Detailed","lat":32.053585,"lng":34.799749,"d":1395,"near":"תחנת רכבת תל אביב ההגנה"},{"hub":90,"mname":" - 1140","mmodes":"Rail | LRT","mn":2,"status":"Detailed","lat":31.956061,"lng":34.777918,"d":1395,"near":"תחנה מרכזית חדשה, ראשון לציון"},{"hub":126,"mname":"412 - 1176","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":31.936839,"lng":34.799934,"d":1398,"near":"תחנת רכבת הראשונים"},{"hub":383,"mname":"רופין - 1433","mmodes":"Metro | LRT","mn":2,"status":"Detailed","lat":31.77453,"lng":35.204984,"d":1416,"near":"תחנת רכבת ירושלים-יצחק נבון"},{"hub":69,"mname":" - 1119","mmodes":"Rail | Metro","mn":2,"status":"Operating","lat":32.001378,"lng":34.75959,"d":1473,"near":"תחנת רכבת בת ים-יוספטל"},{"hub":153,"mname":"המלאכה - 1203","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.020892,"lng":34.805414,"d":1482,"near":"המלאכה/הרוקמים, חולון"},{"hub":54,"mname":"4 - 1104","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.761107,"lng":34.667107,"d":1489,"near":"תחנת רכבת אשדוד-עד הלום"},{"hub":151,"mname":" - 1201","mmodes":"LRT | BRT","mn":2,"status":"Detailed","lat":31.993432,"lng":34.813297,"d":1491,"near":"המכבים/הציונות, ראשל\"צ"},{"hub":104,"mname":"סמטת שלוש - 1154","mmodes":"LRT | BRT","mn":2,"status":"Operating","lat":32.058189,"lng":34.763502,"d":1517,"near":"המלך ג'ורג'/אלנבי, תל אביב"},{"hub":136,"mname":"שדרות דוד בן גוריון - 1186","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.249876,"lng":34.818586,"d":1521,"near":"תחנת רכבת באר שבע צפון-האוניברסיטה"},{"hub":155,"mname":"יצחק רבין - 1205","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.066527,"lng":34.80911,"d":1534,"near":"תחנת רכבת השלום"},{"hub":40,"mname":"שדרות בני ברית - 1090","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.806792,"lng":34.663039,"d":1560,"near":"היהלומים/הבנאים, אשדוד"},{"hub":15,"mname":"דוד בן גוריון - 1065","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.663634,"lng":34.563382,"d":1566,"near":"יצחק רבין/עמק יזרעאל, אשקלון"},{"hub":173,"mname":"אלוף שדה - 1223","mmodes":"LRT | BRT","mn":2,"status":"Detailed","lat":32.05565,"lng":34.834134,"d":1579,"near":"תל השומר, אונקולוגיה"},{"hub":182,"mname":"פנחס רוזן - 1232","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.118156,"lng":34.825442,"d":1586,"near":"הארד/ולנברג, תל אביב"},{"hub":142,"mname":"הרצל - 1192","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":31.883702,"lng":34.81637,"d":1593,"near":"צומת בילו/בית חולים קפלן"},{"hub":176,"mname":" - 1226","mmodes":"Metro | LRT | BRT","mn":3,"status":"Detailed","lat":32.076094,"lng":34.8436,"d":1608,"near":"כיכר יפה נוף, פתח תקווה"},{"hub":266,"mname":"ניסנבוים - 1316","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.796143,"lng":35.008033,"d":1649,"near":"חיפה מזרח"},{"hub":165,"mname":" - 1215","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.25733,"lng":34.82621,"d":1674,"near":"תחנת רכבת באר שבע צפון-האוניברסיטה"},{"hub":286,"mname":"מטרונית - 1336","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.79858,"lng":35.018596,"d":1687,"near":"מרכזית המפרץ"},{"hub":93,"mname":"אברהם בר - 1143","mmodes":"Metro | LRT","mn":2,"status":"Detailed","lat":31.988545,"lng":34.776055,"d":1704,"near":"תחנת רכבת משה דיין"},{"hub":281,"mname":"טרומפלדור - 1331","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.786121,"lng":35.019082,"d":1725,"near":"מרכזית המפרץ"},{"hub":185,"mname":" - 1235","mmodes":"Rail | Metro | LRT","mn":3,"status":"Operating","lat":32.180857,"lng":34.851743,"d":1732,"near":"בן גוריון/סוקולוב, הרצליה"},{"hub":145,"mname":"הרצל - 1195","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":31.894021,"lng":34.811733,"d":1752,"near":"תחנת רכבת רחובות"},{"hub":156,"mname":"כצנלסון - 1206","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.075712,"lng":34.818173,"d":1768,"near":"מרכז דן, בני ברק"},{"hub":183,"mname":"משה סנה - 1233","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.123345,"lng":34.824145,"d":1819,"near":"גלילות דרום"},{"hub":252,"mname":"שדרות הנשיא - 1302","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.804659,"lng":34.987611,"d":1823,"near":"חיפה מזרח"},{"hub":102,"mname":"שלבים - 1152","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.054284,"lng":34.765105,"d":1858,"near":"המלך ג'ורג'/אלנבי, תל אביב"},{"hub":279,"mname":"מטרונית - 1329","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.776715,"lng":35.040247,"d":1885,"near":"מרכזית המפרץ"},{"hub":304,"mname":" - 1354","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.842423,"lng":35.089335,"d":1897,"near":"מרכזית הקריות"},{"hub":240,"mname":"ההגנה - 1290","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.828889,"lng":34.963336,"d":1915,"near":"תחנת רכבת בת גלים"},{"hub":175,"mname":"כביש גהה - 1225","mmodes":"LRT | BRT","mn":2,"status":"Detailed","lat":32.067993,"lng":34.840185,"d":1990,"near":"כיכר יפה נוף, פתח תקווה"},{"hub":378,"mname":"דרך בית לחם - 1428","mmodes":"Metro | LRT","mn":2,"status":"Detailed","lat":31.750453,"lng":35.217913,"d":2017,"near":"תחנת רכבת ירושלים-החאן"},{"hub":73,"mname":"שדרות ירושלים - 1123","mmodes":"Metro | LRT","mn":2,"status":"Operating","lat":32.053893,"lng":34.759401,"d":2062,"near":"תחנת רכבת חולון-וולפסון"},{"hub":154,"mname":" - 1204","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":32.065115,"lng":34.815323,"d":2133,"near":"תחנת רכבת השלום"},{"hub":278,"mname":"דוד רוז - 1328","mmodes":"Metro | BRT | Funicular","mn":3,"status":"Operating","lat":32.775057,"lng":35.027392,"d":2152,"near":"מרכזית המפרץ"},{"hub":261,"mname":"65 - 1311","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.471054,"lng":35.010871,"d":2155,"near":"ברקאי/חריש"},{"hub":219,"mname":"כביש חיפה רעננה - 1269","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.304654,"lng":34.900766,"d":2175,"near":"צומת השרון"},{"hub":280,"mname":"דרך יעקב דורי - 1330","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.778929,"lng":35.01926,"d":2195,"near":"מרכזית המפרץ"},{"hub":59,"mname":" - 1109","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.830428,"lng":34.694072,"d":2202,"near":"צומת בני ברית"},{"hub":124,"mname":"ויצמן - 1174","mmodes":"Metro | BRT","mn":2,"status":"Detailed","lat":31.929611,"lng":34.798722,"d":2208,"near":"תחנת רכבת הראשונים"},{"hub":251,"mname":"שדרות מוריה - 1301","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.80174,"lng":34.984339,"d":2237,"near":"חיפה מזרח"},{"hub":262,"mname":"חנקין - 1312","mmodes":"Metro | BRT | Funicular","mn":3,"status":"Strategic","lat":32.782824,"lng":35.014426,"d":2283,"near":"מרכזית המפרץ"},{"hub":29,"mname":" - 1079","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.753272,"lng":34.663172,"d":2368,"near":"תחנת רכבת אשדוד-עד הלום"},{"hub":264,"mname":"שמחה גולן - 1314","mmodes":"Metro | BRT | Funicular","mn":3,"status":"Strategic","lat":32.789043,"lng":35.008602,"d":2437,"near":"חיפה מזרח"},{"hub":417,"mname":"יצחק הנדיב - 1467","mmodes":"Metro | LRT","mn":2,"status":"Strategic","lat":31.793549,"lng":35.240816,"d":2448,"near":"תחנת רכבת ירושלים-מרכז"},{"hub":37,"mname":"שדרות ירושלים - 1087","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.791701,"lng":34.64881,"d":2503,"near":"תחנת רכבת אשדוד-עד הלום"},{"hub":250,"mname":"שדרות מוריה - 1300","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.797187,"lng":34.984328,"d":2507,"near":"חיפה מזרח"},{"hub":237,"mname":" - 1287","mmodes":"Metro | BRT","mn":2,"status":"Strategic","lat":32.820406,"lng":34.959315,"d":2553,"near":"תחנת רכבת בת גלים"},{"hub":263,"mname":" - 1313","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.787258,"lng":34.999016,"d":2691,"near":"חיפה מזרח"},{"hub":248,"mname":"שדרות מוריה - 1298","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.789761,"lng":34.986669,"d":2761,"near":"מרכזית חוף הכרמל"},{"hub":207,"mname":"כביש חיפה רעננה - 1257","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.282587,"lng":34.896618,"d":2818,"near":"רייך/לנטוס, נתניה"},{"hub":206,"mname":"כביש חיפה רעננה - 1256","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.255139,"lng":34.891031,"d":2994,"near":"תחנת רכבת בית יהושוע"},{"hub":170,"mname":"4 - 1220","mmodes":"LRT | BRT","mn":2,"status":"Detailed","lat":32.023319,"lng":34.824792,"d":3010,"near":"צומת נווה סביון"},{"hub":230,"mname":"הרצל - 1280","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.767766,"lng":34.96826,"d":3025,"near":"מרכזית חוף הכרמל"},{"hub":56,"mname":" - 1106","mmodes":"Rail | LRT","mn":2,"status":"Detailed","lat":31.820256,"lng":34.701784,"d":3031,"near":"צומת בני ברית"},{"hub":245,"mname":"חורב - 1295","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.783202,"lng":34.987775,"d":3055,"near":"מרכזית חוף הכרמל"},{"hub":166,"mname":"60 - 1216","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.269661,"lng":34.842303,"d":3304,"near":"תחנת רכבת באר שבע צפון-האוניברסיטה"},{"hub":229,"mname":"הרצל - 1279","mmodes":"BRT | Funicular","mn":2,"status":"Strategic","lat":32.763858,"lng":34.971985,"d":3555,"near":"מרכזית חוף הכרמל"},{"hub":244,"mname":"65 - 1294","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.464978,"lng":34.993878,"d":3825,"near":"ברקאי/חריש"},{"hub":228,"mname":"65 - 1278","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.449669,"lng":34.961836,"d":4039,"near":"תחנת רכבת קיסריה-פרדס חנה"},{"hub":409,"mname":" - 1459","mmodes":"Metro | LRT","mn":2,"status":"Operating","lat":31.819455,"lng":35.229284,"d":4182,"near":"תחנת רכבת ירושלים-מרכז"},{"hub":227,"mname":" - 1277","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.447707,"lng":34.956853,"d":4199,"near":"תחנת רכבת קיסריה-פרדס חנה"},{"hub":243,"mname":"65 - 1293","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.457746,"lng":34.98479,"d":4212,"near":"תחנת רכבת קיסריה-פרדס חנה"},{"hub":349,"mname":"אדמונד סחייק - 1399","mmodes":"Metro | LRT","mn":2,"status":"Detailed","lat":31.749279,"lng":35.184772,"d":4261,"near":"תחנת רכבת ירושלים-החאן"},{"hub":225,"mname":" - 1275","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.447544,"lng":34.943302,"d":4283,"near":"תחנת רכבת חדרה-מערב"},{"hub":351,"mname":"יעקב גאוני - 1401","mmodes":"Metro | LRT","mn":2,"status":"Detailed","lat":31.751809,"lng":35.178355,"d":4469,"near":"תחנת רכבת ירושלים-יצחק נבון"},{"hub":420,"mname":" - 1470","mmodes":"Metro | LRT","mn":2,"status":"Operating","lat":31.819371,"lng":35.239664,"d":4523,"near":"תחנת רכבת ירושלים-מרכז"},{"hub":167,"mname":"תפוז - 1217","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.279555,"lng":34.852207,"d":4592,"near":"תחנת רכבת באר שבע צפון-האוניברסיטה"},{"hub":316,"mname":" - 1366","mmodes":"Metro | LRT","mn":2,"status":"Operating","lat":31.756406,"lng":35.16022,"d":5170,"near":"תחנת רכבת ירושלים-יצחק נבון"},{"hub":226,"mname":" - 1276","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.107013,"lng":34.960818,"d":5581,"near":"תחנת רכבת אלעד"},{"hub":315,"mname":"3877 - 1365","mmodes":"Metro | LRT","mn":2,"status":"Detailed","lat":31.751211,"lng":35.154791,"d":5937,"near":"תחנת רכבת ירושלים-יצחק נבון"},{"hub":192,"mname":"60 - 1242","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.2901,"lng":34.879514,"d":7442,"near":"תחנת רכבת באר שבע צפון-האוניברסיטה"},{"hub":376,"mname":"66 - 1426","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.573038,"lng":35.191782,"d":8465,"near":"תחנת רכבת כפר ברוך"},{"hub":414,"mname":" - 1464","mmodes":"Rail | LRT","mn":2,"status":"Strategic","lat":32.757906,"lng":35.23311,"d":9486,"near":"כיכר המוסכים, נצרת"},{"hub":374,"mname":"436 - 1424","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":31.870622,"lng":35.177373,"d":9555,"near":"תחנת רכבת ירושלים-יצחק נבון"},{"hub":375,"mname":"ואדי עארה - 1425","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.551314,"lng":35.164629,"d":11496,"near":"תחנת רכבת כפר ברוך"},{"hub":260,"mname":"שדרות החשמונאים - 1310","mmodes":"Rail | BRT","mn":2,"status":"Operating","lat":31.900768,"lng":35.005465,"d":11821,"near":"קניון לוד"},{"hub":319,"mname":" - 1369","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.533095,"lng":35.147861,"d":12699,"near":"ברקאי/חריש"},{"hub":320,"mname":"ואדי עארה - 1370","mmodes":"LRT | BRT","mn":2,"status":"Strategic","lat":32.541876,"lng":35.156827,"d":12741,"near":"תחנת רכבת כפר ברוך"},{"hub":139,"mname":" - 1189","mmodes":"Rail | BRT","mn":2,"status":"Operating","lat":31.747049,"lng":34.821837,"d":13569,"near":"צומת בילו/בית חולים קפלן"},{"hub":214,"mname":"הערבה - 1264","mmodes":"Rail | Rail fast","mn":2,"status":"Strategic","lat":29.55722,"lng":34.956052,"d":187424,"near":"תחנת רכבת באר שבע מרכז"}];
+  const css = getComputedStyle(document.documentElement), tok = n => css.getPropertyValue(n).trim();
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const map = L.map('map', {zoomControl: false, preferCanvas: true});
+  L.control.zoom({position: 'topright'}).addTo(map);
+  map.attributionControl.setPrefix('');
+  map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · TOD Israel explorer (beta)');
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, className: 'osm-gray'}).addTo(map);
+
+  const both = L.layerGroup().addTo(map), onlyx = L.layerGroup().addTo(map), onlym = L.layerGroup().addTo(map);
+  const R = 6;
+  const modesLine = (a, b) => a === b ? `<span class="same">modes agree</span>` : `<span class="diff">modes differ</span>`;
+
+  PAIRS.forEach(p => {
+    const tie = L.polyline([[p.mlat, p.mlng], [p.xlat, p.xlng]], {color: tok('--tie'), weight: 1.5, opacity: .9, interactive: false});
+    const m = L.circleMarker([p.mlat, p.mlng], {radius: R, color: tok('--ring'), weight: 1.5, fillColor: tok('--both'), fillOpacity: .95});
+    const x = L.circleMarker([p.xlat, p.xlng], {radius: R + 1, color: tok('--both'), weight: 2.2, fillColor: tok('--both'), fillOpacity: 0});
+    const html = `<div class="pp" dir="auto"><span class="tag" style="background:var(--both)">In both · ${p.d} m apart</span>
+      <div class="two">
+        <div class="col"><h3>Map hub ${p.hub}</h3><div class="nm">${esc(p.mname)}</div><div>${esc(p.mmodes)}</div><div>n_modes ${p.mn}</div></div>
+        <div class="col"><h3>xlsx row ${p.xrow}</h3><div class="nm">${esc(p.xname)}</div><div>${esc(p.xmodes)}</div><div>Num_Modes ${p.xn}${p.xrank != null ? ` · rank ${p.xrank}` : ''}${p.xtype ? ` · ${esc(p.xtype)}` : ''}</div></div>
+      </div><div style="margin-top:6px">${modesLine(p.mmodes, p.xmodes)}</div></div>`;
+    m.bindPopup(html, {maxWidth: 360}); x.bindPopup(html, {maxWidth: 360});
+    m.bindTooltip(`${p.mname} ↔ ${p.xname} (${p.d} m)`, {direction: 'top', offset: [0, -R]});
+    both.addLayer(tie); both.addLayer(x); both.addLayer(m);
+  });
+  ONLYX.forEach(p => {
+    const x = L.circleMarker([p.lat, p.lng], {radius: R + 1, color: tok('--onlyx'), weight: 2.4, fillColor: tok('--onlyx'), fillOpacity: .15});
+    x.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--onlyx)">Only in xlsx</span>
+      <h2>${esc(p.xname)}</h2><dl class="kv"><dt>xlsx row</dt><dd>${p.xrow}</dd><dt>modes</dt><dd>${esc(p.xmodes)}</dd><dt>Num_Modes</dt><dd>${p.xn}</dd>
+      ${p.xrank != null ? `<dt>rank</dt><dd>${p.xrank}</dd>` : ''}${p.xtype ? `<dt>HubType</dt><dd>${esc(p.xtype)}</dd>` : ''}
+      <dt>nearest map hub</dt><dd>${esc(p.near)} · ${p.d.toLocaleString()} m</dd></dl></div>`, {maxWidth: 320});
+    x.bindTooltip(`${p.xname} (xlsx only)`, {direction: 'top', offset: [0, -R]});
+    onlyx.addLayer(x);
+  });
+  ONLYM.forEach(p => {
+    const m = L.circleMarker([p.lat, p.lng], {radius: R, color: tok('--ring'), weight: 1.5, fillColor: tok('--onlym'), fillOpacity: .95});
+    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--onlym)">Only in map</span>
+      <h2>${esc(p.mname)}</h2><dl class="kv"><dt>hub_id</dt><dd>${p.hub}</dd><dt>modes</dt><dd>${esc(p.mmodes)}</dd><dt>n_modes</dt><dd>${p.mn}</dd>
+      <dt>status</dt><dd>${esc(p.status)}</dd><dt>nearest xlsx hub</dt><dd>${esc(p.near)} · ${p.d.toLocaleString()} m</dd></dl></div>`, {maxWidth: 320});
+    m.bindTooltip(`${p.mname} (map only)`, {direction: 'top', offset: [0, -R]});
+    onlym.addLayer(m);
+  });
+  document.getElementById('cnt-both').textContent = `${PAIRS.length} pairs`;
+  document.getElementById('cnt-onlyx').textContent = ONLYX.length;
+  document.getElementById('cnt-onlym').textContent = ONLYM.length;
+  const wire = (id, layer) => document.getElementById(id).addEventListener('change', e => e.target.checked ? layer.addTo(map) : map.removeLayer(layer));
+  wire('set-both', both); wire('set-onlyx', onlyx); wire('set-onlym', onlym);
+
+  const all = [...PAIRS.map(p => [p.mlat, p.mlng]), ...PAIRS.map(p => [p.xlat, p.xlng]), ...ONLYX.map(p => [p.lat, p.lng]), ...ONLYM.map(p => [p.lat, p.lng])];
+  const bounds = L.latLngBounds(all);
+  document.getElementById('btn-fit').addEventListener('click', () => map.fitBounds(bounds, {padding: [30, 30]}));
+  document.getElementById('btn-tlv').addEventListener('click', () => map.setView([32.08, 34.82], 12));
+  document.getElementById('btn-hfa').addEventListener('click', () => map.setView([32.80, 35.02], 12));
+  document.getElementById('btn-jlm').addEventListener('click', () => map.setView([31.78, 35.21], 12));
+  const panel = document.getElementById('panel');
+  L.DomEvent.disableClickPropagation(panel); L.DomEvent.disableScrollPropagation(panel);
+  map.fitBounds(bounds, {padding: [30, 30]});
+})();
+</script>
+
+</body>
+</html>
