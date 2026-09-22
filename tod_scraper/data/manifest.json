@@ -1,0 +1,23 @@
+{
+  "app_url": "https://tod-israel-d99f0bf7ea5d.herokuapp.com/",
+  "scripts": [
+    "https://cdn.tailwindcss.com",
+    "/assets/index-w3PCQpp6.js"
+  ],
+  "items": [
+    {
+      "kind": "network",
+      "url": "https://tod-israel-d99f0bf7ea5d.herokuapp.com/functional_areas.geojson",
+      "file": "functional_areas_geojson_cfbaa724.geojson",
+      "bytes": 42176,
+      "content_type": "application/geo+json"
+    },
+    {
+      "kind": "network",
+      "url": "https://tod-israel-d99f0bf7ea5d.herokuapp.com/munies_data.geojson",
+      "file": "munies_data_geojson_84f6f55b.geojson",
+      "bytes": 1098125,
+      "content_type": "application/geo+json"
+    }
+  ]
+}

@@ -1,0 +1,3113 @@
+{
+  "layers": [
+    {
+      "id": "land",
+      "type": "background",
+      "source": null,
+      "sourceLayer": null,
+      "visible": true,
+      "filter": null
+    },
+    {
+      "id": "national-park",
+      "type": "fill",
+      "source": "composite",
+      "sourceLayer": "landuse_overlay",
+      "visible": true,
+      "filter": [
+        "==",
+        [
+          "get",
+          "class"
+        ],
+        "national_park"
+      ]
+    },
+    {
+      "id": "landuse",
+      "type": "fill",
+      "source": "composite",
+      "sourceLayer": "landuse",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          ">=",
+          [
+            "to-number",
+            [
+              "get",
+              "sizerank"
+            ]
+          ],
+          0
+        ],
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "agriculture",
+            "wood",
+            "grass",
+            "scrub",
+            "park",
+            "airport",
+            "glacier",
+            "pitch",
+            "sand"
+          ],
+          true,
+          "residential",
+          [
+            "step",
+            [
+              "zoom"
+            ],
+            true,
+            12,
+            false
+          ],
+          false
+        ],
+        [
+          "<=",
+          [
+            "-",
+            [
+              "to-number",
+              [
+                "get",
+                "sizerank"
+              ]
+            ],
+            [
+              "interpolate",
+              [
+                "exponential",
+                1.5
+              ],
+              [
+                "zoom"
+              ],
+              12,
+              0,
+              18,
+              14
+            ]
+          ],
+          8
+        ]
+      ]
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "waterway",
+      "visible": true,
+      "filter": null
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "composite",
+      "sourceLayer": "water",
+      "visible": true,
+      "filter": null
+    },
+    {
+      "id": "land-structure-polygon",
+      "type": "fill",
+      "source": "composite",
+      "sourceLayer": "structure",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "land"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "Polygon"
+        ]
+      ]
+    },
+    {
+      "id": "land-structure-line",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "structure",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "land"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "aeroway-polygon",
+      "type": "fill",
+      "source": "composite",
+      "sourceLayer": "aeroway",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "get",
+            "type"
+          ],
+          [
+            "runway",
+            "taxiway",
+            "helipad"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "Polygon"
+        ]
+      ]
+    },
+    {
+      "id": "aeroway-line",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "aeroway",
+      "visible": true,
+      "filter": [
+        "==",
+        [
+          "geometry-type"
+        ],
+        "LineString"
+      ]
+    },
+    {
+      "id": "building",
+      "type": "fill",
+      "source": "composite",
+      "sourceLayer": "building",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "!=",
+          [
+            "get",
+            "type"
+          ],
+          "building:part"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "underground"
+          ],
+          "false"
+        ]
+      ]
+    },
+    {
+      "id": "tunnel-path-trail",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "tunnel"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "path"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "type"
+          ],
+          [
+            "hiking",
+            "mountain_bike",
+            "trail"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "tunnel-path-cycleway-piste",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "tunnel"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "path"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "type"
+          ],
+          [
+            "cycleway",
+            "piste"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "tunnel-path",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "tunnel"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "path"
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "type"
+          ],
+          "steps"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "tunnel-steps",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "tunnel"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "type"
+          ],
+          "steps"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "tunnel-pedestrian",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "tunnel"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "pedestrian"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "tunnel-simple",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "tunnel"
+        ],
+        [
+          "step",
+          [
+            "zoom"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "motorway_link",
+              "trunk",
+              "trunk_link",
+              "primary",
+              "secondary",
+              "tertiary",
+              "street",
+              "street_limited",
+              "primary_link",
+              "track"
+            ],
+            true,
+            false
+          ],
+          14,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "motorway_link",
+              "trunk",
+              "trunk_link",
+              "primary",
+              "primary_link",
+              "secondary",
+              "secondary_link",
+              "tertiary",
+              "tertiary_link",
+              "street",
+              "street_limited",
+              "service",
+              "track"
+            ],
+            true,
+            false
+          ]
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "road-path-trail",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "path"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "type"
+          ],
+          [
+            "hiking",
+            "mountain_bike",
+            "trail"
+          ],
+          true,
+          false
+        ],
+        [
+          "match",
+          [
+            "get",
+            "structure"
+          ],
+          [
+            "none",
+            "ford"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "road-path-cycleway-piste",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "path"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "type"
+          ],
+          [
+            "cycleway",
+            "piste"
+          ],
+          true,
+          false
+        ],
+        [
+          "match",
+          [
+            "get",
+            "structure"
+          ],
+          [
+            "none",
+            "ford"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "road-path",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "path"
+        ],
+        [
+          "step",
+          [
+            "zoom"
+          ],
+          [
+            "!",
+            [
+              "match",
+              [
+                "get",
+                "type"
+              ],
+              [
+                "steps",
+                "sidewalk",
+                "crossing"
+              ],
+              true,
+              false
+            ]
+          ],
+          16,
+          [
+            "!=",
+            [
+              "get",
+              "type"
+            ],
+            "steps"
+          ]
+        ],
+        [
+          "match",
+          [
+            "get",
+            "structure"
+          ],
+          [
+            "none",
+            "ford"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "road-steps",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "type"
+          ],
+          "steps"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "structure"
+          ],
+          [
+            "none",
+            "ford"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "road-pedestrian",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "pedestrian"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "structure"
+          ],
+          [
+            "none",
+            "ford"
+          ],
+          true,
+          false
+        ],
+        [
+          "case",
+          [
+            "has",
+            "layer"
+          ],
+          [
+            ">=",
+            [
+              "get",
+              "layer"
+            ],
+            0
+          ],
+          true
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "road-simple",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "step",
+          [
+            "zoom"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            true,
+            false
+          ],
+          6,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "trunk",
+              "primary"
+            ],
+            true,
+            false
+          ],
+          8,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "trunk",
+              "primary",
+              "secondary"
+            ],
+            true,
+            false
+          ],
+          10,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "trunk",
+              "primary",
+              "secondary",
+              "tertiary",
+              "motorway_link",
+              "trunk_link"
+            ],
+            true,
+            false
+          ],
+          11,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "motorway_link",
+              "trunk",
+              "trunk_link",
+              "primary",
+              "secondary",
+              "tertiary",
+              "street"
+            ],
+            true,
+            false
+          ],
+          12,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "motorway_link",
+              "trunk",
+              "trunk_link",
+              "primary",
+              "secondary",
+              "tertiary",
+              "street",
+              "street_limited",
+              "primary_link"
+            ],
+            true,
+            false
+          ],
+          13,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "motorway_link",
+              "trunk",
+              "trunk_link",
+              "primary",
+              "secondary",
+              "tertiary",
+              "street",
+              "street_limited",
+              "primary_link",
+              "track"
+            ],
+            true,
+            false
+          ],
+          14,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "motorway_link",
+              "trunk",
+              "trunk_link",
+              "primary",
+              "primary_link",
+              "secondary",
+              "secondary_link",
+              "tertiary",
+              "tertiary_link",
+              "street",
+              "street_limited",
+              "service",
+              "track"
+            ],
+            true,
+            false
+          ]
+        ],
+        [
+          "match",
+          [
+            "get",
+            "structure"
+          ],
+          [
+            "none",
+            "ford"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "road-rail",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "major_rail",
+            "minor_rail"
+          ],
+          true,
+          false
+        ],
+        [
+          "match",
+          [
+            "get",
+            "structure"
+          ],
+          [
+            "none",
+            "ford"
+          ],
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "id": "bridge-path-trail",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "bridge"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "path"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "type"
+          ],
+          [
+            "hiking",
+            "mountain_bike",
+            "trail"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "bridge-path-cycleway-piste",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "bridge"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "path"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "type"
+          ],
+          [
+            "cycleway",
+            "piste"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "bridge-path",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "bridge"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "path"
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "type"
+          ],
+          "steps"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "bridge-steps",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "type"
+          ],
+          "steps"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "bridge"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "bridge-pedestrian",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "bridge"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "pedestrian"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "bridge-case-simple",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "bridge"
+        ],
+        [
+          "step",
+          [
+            "zoom"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "motorway_link",
+              "trunk",
+              "trunk_link",
+              "primary",
+              "secondary",
+              "tertiary",
+              "street",
+              "street_limited",
+              "primary_link",
+              "track"
+            ],
+            true,
+            false
+          ],
+          14,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "motorway_link",
+              "trunk",
+              "trunk_link",
+              "primary",
+              "primary_link",
+              "secondary",
+              "secondary_link",
+              "tertiary",
+              "tertiary_link",
+              "street",
+              "street_limited",
+              "service",
+              "track"
+            ],
+            true,
+            false
+          ]
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "bridge-simple",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "bridge"
+        ],
+        [
+          "step",
+          [
+            "zoom"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "trunk"
+            ],
+            true,
+            false
+          ],
+          13,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "motorway_link",
+              "trunk",
+              "trunk_link",
+              "primary",
+              "secondary",
+              "tertiary",
+              "street",
+              "street_limited",
+              "primary_link",
+              "track"
+            ],
+            true,
+            false
+          ],
+          14,
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "motorway",
+              "motorway_link",
+              "trunk",
+              "trunk_link",
+              "primary",
+              "primary_link",
+              "secondary",
+              "secondary_link",
+              "tertiary",
+              "tertiary_link",
+              "street",
+              "street_limited",
+              "service",
+              "track"
+            ],
+            true,
+            false
+          ]
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "bridge-rail",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "structure"
+          ],
+          "bridge"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "major_rail",
+            "minor_rail"
+          ],
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "id": "admin-1-boundary-bg",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "admin",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "admin_level"
+          ],
+          1
+        ],
+        [
+          "==",
+          [
+            "get",
+            "maritime"
+          ],
+          "false"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "worldview"
+          ],
+          [
+            "all",
+            "US"
+          ],
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "id": "admin-0-boundary-bg",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "admin",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "admin_level"
+          ],
+          0
+        ],
+        [
+          "==",
+          [
+            "get",
+            "maritime"
+          ],
+          "false"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "worldview"
+          ],
+          [
+            "all",
+            "US"
+          ],
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "id": "admin-1-boundary",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "admin",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "admin_level"
+          ],
+          1
+        ],
+        [
+          "==",
+          [
+            "get",
+            "maritime"
+          ],
+          "false"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "worldview"
+          ],
+          [
+            "all",
+            "US"
+          ],
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "id": "admin-0-boundary",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "admin",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "admin_level"
+          ],
+          0
+        ],
+        [
+          "==",
+          [
+            "get",
+            "disputed"
+          ],
+          "false"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "maritime"
+          ],
+          "false"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "worldview"
+          ],
+          [
+            "all",
+            "US"
+          ],
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "id": "admin-0-boundary-disputed",
+      "type": "line",
+      "source": "composite",
+      "sourceLayer": "admin",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "disputed"
+          ],
+          "true"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "admin_level"
+          ],
+          0
+        ],
+        [
+          "==",
+          [
+            "get",
+            "maritime"
+          ],
+          "false"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "worldview"
+          ],
+          [
+            "all",
+            "US"
+          ],
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "id": "road-label-simple",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "road",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "has",
+          "name"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "motorway",
+            "trunk",
+            "primary",
+            "secondary",
+            "tertiary",
+            "street",
+            "street_limited"
+          ],
+          true,
+          false
+        ]
+      ]
+    },
+    {
+      "id": "waterway-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "natural_label",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "canal",
+            "river",
+            "stream",
+            "disputed_canal",
+            "disputed_river",
+            "disputed_stream"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "worldview"
+            ],
+            [
+              "all",
+              "US"
+            ],
+            true,
+            false
+          ],
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "natural-line-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "natural_label",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "glacier",
+            "landform",
+            "disputed_glacier",
+            "disputed_landform"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "worldview"
+            ],
+            [
+              "all",
+              "US"
+            ],
+            true,
+            false
+          ],
+          false
+        ],
+        [
+          "<=",
+          [
+            "get",
+            "filterrank"
+          ],
+          1
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "natural-point-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "natural_label",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "dock",
+            "glacier",
+            "landform",
+            "water_feature",
+            "wetland",
+            "disputed_dock",
+            "disputed_glacier",
+            "disputed_landform",
+            "disputed_water_feature",
+            "disputed_wetland"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "worldview"
+            ],
+            [
+              "all",
+              "US"
+            ],
+            true,
+            false
+          ],
+          false
+        ],
+        [
+          "<=",
+          [
+            "get",
+            "filterrank"
+          ],
+          1
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "Point"
+        ]
+      ]
+    },
+    {
+      "id": "water-line-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "natural_label",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "bay",
+            "ocean",
+            "reservoir",
+            "sea",
+            "water",
+            "disputed_bay",
+            "disputed_ocean",
+            "disputed_reservoir",
+            "disputed_sea",
+            "disputed_water"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "worldview"
+            ],
+            [
+              "all",
+              "US"
+            ],
+            true,
+            false
+          ],
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ]
+    },
+    {
+      "id": "water-point-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "natural_label",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "bay",
+            "ocean",
+            "reservoir",
+            "sea",
+            "water",
+            "disputed_bay",
+            "disputed_ocean",
+            "disputed_reservoir",
+            "disputed_sea",
+            "disputed_water"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "worldview"
+            ],
+            [
+              "all",
+              "US"
+            ],
+            true,
+            false
+          ],
+          false
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "Point"
+        ]
+      ]
+    },
+    {
+      "id": "poi-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "poi_label",
+      "visible": true,
+      "filter": [
+        "<=",
+        [
+          "get",
+          "filterrank"
+        ],
+        [
+          "+",
+          [
+            "step",
+            [
+              "zoom"
+            ],
+            0,
+            16,
+            1,
+            17,
+            2
+          ],
+          1
+        ]
+      ]
+    },
+    {
+      "id": "airport-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "airport_label",
+      "visible": true,
+      "filter": [
+        "match",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "military",
+          "civil",
+          "disputed_military",
+          "disputed_civil"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "worldview"
+          ],
+          [
+            "all",
+            "US"
+          ],
+          true,
+          false
+        ],
+        false
+      ]
+    },
+    {
+      "id": "settlement-subdivision-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "place_label",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "settlement_subdivision",
+            "disputed_settlement_subdivision"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "worldview"
+            ],
+            [
+              "all",
+              "US"
+            ],
+            true,
+            false
+          ],
+          false
+        ],
+        [
+          "<=",
+          [
+            "get",
+            "filterrank"
+          ],
+          3
+        ]
+      ]
+    },
+    {
+      "id": "settlement-minor-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "place_label",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "<=",
+          [
+            "get",
+            "filterrank"
+          ],
+          2
+        ],
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "settlement",
+            "disputed_settlement"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "worldview"
+            ],
+            [
+              "all",
+              "US"
+            ],
+            true,
+            false
+          ],
+          false
+        ],
+        [
+          "step",
+          [
+            "zoom"
+          ],
+          [
+            ">",
+            [
+              "get",
+              "symbolrank"
+            ],
+            6
+          ],
+          4,
+          [
+            ">=",
+            [
+              "get",
+              "symbolrank"
+            ],
+            7
+          ],
+          6,
+          [
+            ">=",
+            [
+              "get",
+              "symbolrank"
+            ],
+            8
+          ],
+          7,
+          [
+            ">=",
+            [
+              "get",
+              "symbolrank"
+            ],
+            10
+          ],
+          10,
+          [
+            ">=",
+            [
+              "get",
+              "symbolrank"
+            ],
+            11
+          ],
+          11,
+          [
+            ">=",
+            [
+              "get",
+              "symbolrank"
+            ],
+            13
+          ],
+          12,
+          [
+            ">=",
+            [
+              "get",
+              "symbolrank"
+            ],
+            15
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "settlement-major-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "place_label",
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          "<=",
+          [
+            "get",
+            "filterrank"
+          ],
+          2
+        ],
+        [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "settlement",
+            "disputed_settlement"
+          ],
+          [
+            "match",
+            [
+              "get",
+              "worldview"
+            ],
+            [
+              "all",
+              "US"
+            ],
+            true,
+            false
+          ],
+          false
+        ],
+        [
+          "step",
+          [
+            "zoom"
+          ],
+          false,
+          2,
+          [
+            "<=",
+            [
+              "get",
+              "symbolrank"
+            ],
+            6
+          ],
+          4,
+          [
+            "<",
+            [
+              "get",
+              "symbolrank"
+            ],
+            7
+          ],
+          6,
+          [
+            "<",
+            [
+              "get",
+              "symbolrank"
+            ],
+            8
+          ],
+          7,
+          [
+            "<",
+            [
+              "get",
+              "symbolrank"
+            ],
+            10
+          ],
+          10,
+          [
+            "<",
+            [
+              "get",
+              "symbolrank"
+            ],
+            11
+          ],
+          11,
+          [
+            "<",
+            [
+              "get",
+              "symbolrank"
+            ],
+            13
+          ],
+          12,
+          [
+            "<",
+            [
+              "get",
+              "symbolrank"
+            ],
+            15
+          ],
+          13,
+          [
+            ">=",
+            [
+              "get",
+              "symbolrank"
+            ],
+            11
+          ],
+          14,
+          [
+            ">=",
+            [
+              "get",
+              "symbolrank"
+            ],
+            15
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "state-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "place_label",
+      "visible": true,
+      "filter": [
+        "match",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "state",
+          "disputed_state"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "worldview"
+          ],
+          [
+            "all",
+            "US"
+          ],
+          true,
+          false
+        ],
+        false
+      ]
+    },
+    {
+      "id": "country-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "place_label",
+      "visible": true,
+      "filter": [
+        "match",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "country",
+          "disputed_country"
+        ],
+        [
+          "match",
+          [
+            "get",
+            "worldview"
+          ],
+          [
+            "all",
+            "US"
+          ],
+          true,
+          false
+        ],
+        false
+      ]
+    },
+    {
+      "id": "continent-label",
+      "type": "symbol",
+      "source": "composite",
+      "sourceLayer": "natural_label",
+      "visible": true,
+      "filter": [
+        "==",
+        [
+          "get",
+          "class"
+        ],
+        "continent"
+      ]
+    },
+    {
+      "id": "line-Metro",
+      "type": "line",
+      "source": "tod-lines",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "==",
+        [
+          "get",
+          "mode"
+        ],
+        "Metro"
+      ]
+    },
+    {
+      "id": "line-LRT",
+      "type": "line",
+      "source": "tod-lines",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "==",
+        [
+          "get",
+          "mode"
+        ],
+        "LRT"
+      ]
+    },
+    {
+      "id": "line-Rail",
+      "type": "line",
+      "source": "tod-lines",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "==",
+        [
+          "get",
+          "mode"
+        ],
+        "Rail"
+      ]
+    },
+    {
+      "id": "line-BRT",
+      "type": "line",
+      "source": "tod-lines",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "==",
+        [
+          "get",
+          "mode"
+        ],
+        "BRT"
+      ]
+    },
+    {
+      "id": "line-FUNI",
+      "type": "line",
+      "source": "tod-lines",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "==",
+        [
+          "get",
+          "mode"
+        ],
+        "FUNI"
+      ]
+    },
+    {
+      "id": "radius-main-Metro",
+      "type": "fill",
+      "source": "radiuses",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "in",
+        "Metro 300",
+        [
+          "get",
+          "combinations_radiuses"
+        ]
+      ]
+    },
+    {
+      "id": "radius-main-LRT",
+      "type": "fill",
+      "source": "radiuses",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "in",
+        "LRT 200",
+        [
+          "get",
+          "combinations_radiuses"
+        ]
+      ]
+    },
+    {
+      "id": "radius-main-Rail",
+      "type": "fill",
+      "source": "radiuses",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "in",
+        "Rail 500",
+        [
+          "get",
+          "combinations_radiuses"
+        ]
+      ]
+    },
+    {
+      "id": "radius-main-Rail fast",
+      "type": "fill",
+      "source": "radiuses",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "in",
+        "Rail fast 500",
+        [
+          "get",
+          "combinations_radiuses"
+        ]
+      ]
+    },
+    {
+      "id": "metropolins-fill",
+      "type": "fill",
+      "source": "metropolins",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": null
+    },
+    {
+      "id": "munies-fill",
+      "type": "fill",
+      "source": "munies",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          ">",
+          [
+            "get",
+            "stations_bruto"
+          ],
+          0
+        ],
+        true,
+        true,
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "rail"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "rail"
+              ],
+              0
+            ],
+            10
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "metro"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "metro"
+              ],
+              0
+            ],
+            56
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "lrt"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "lrt"
+              ],
+              0
+            ],
+            143
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "brt"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "brt"
+              ],
+              0
+            ],
+            120
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "funicular"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "funicular"
+              ],
+              0
+            ],
+            25
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "rail_lines"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "rail_lines"
+              ],
+              0
+            ],
+            4
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "metro_lines"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "metro_lines"
+              ],
+              0
+            ],
+            6
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "lrt_lines"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "lrt_lines"
+              ],
+              0
+            ],
+            15
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "brt_lines"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "brt_lines"
+              ],
+              0
+            ],
+            13
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "funi_lines"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "funi_lines"
+              ],
+              0
+            ],
+            6
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "munies-outline",
+      "type": "line",
+      "source": "munies",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": [
+        "all",
+        [
+          ">",
+          [
+            "get",
+            "stations_bruto"
+          ],
+          0
+        ],
+        true,
+        true,
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "rail"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "rail"
+              ],
+              0
+            ],
+            10
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "metro"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "metro"
+              ],
+              0
+            ],
+            56
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "lrt"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "lrt"
+              ],
+              0
+            ],
+            143
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "brt"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "brt"
+              ],
+              0
+            ],
+            120
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "funicular"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "funicular"
+              ],
+              0
+            ],
+            25
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "rail_lines"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "rail_lines"
+              ],
+              0
+            ],
+            4
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "metro_lines"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "metro_lines"
+              ],
+              0
+            ],
+            6
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "lrt_lines"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "lrt_lines"
+              ],
+              0
+            ],
+            15
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "brt_lines"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "brt_lines"
+              ],
+              0
+            ],
+            13
+          ]
+        ],
+        [
+          "all",
+          [
+            ">=",
+            [
+              "coalesce",
+              [
+                "get",
+                "funi_lines"
+              ],
+              0
+            ],
+            0
+          ],
+          [
+            "<=",
+            [
+              "coalesce",
+              [
+                "get",
+                "funi_lines"
+              ],
+              0
+            ],
+            6
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "functional-areas-fill",
+      "type": "fill",
+      "source": "functional-areas",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": null
+    },
+    {
+      "id": "functional-areas-outline",
+      "type": "line",
+      "source": "functional-areas",
+      "sourceLayer": null,
+      "visible": true,
+      "filter": null
+    }
+  ],
+  "sources": {
+    "composite": {
+      "type": "vector",
+      "url": "mapbox://mapbox.mapbox-streets-v8,mapbox.mapbox-terrain-v2,mapbox.mapbox-bathymetry-v2",
+      "tiles": null
+    },
+    "tod-lines": {
+      "type": "geojson",
+      "url": null,
+      "tiles": null
+    },
+    "radiuses": {
+      "type": "geojson",
+      "url": null,
+      "tiles": null
+    },
+    "metropolins": {
+      "type": "geojson",
+      "url": null,
+      "tiles": null
+    },
+    "munies": {
+      "type": "geojson",
+      "url": null,
+      "tiles": null
+    },
+    "functional-areas": {
+      "type": "geojson",
+      "url": null,
+      "tiles": null
+    }
+  }
+}
