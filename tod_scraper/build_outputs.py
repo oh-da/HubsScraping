@@ -134,6 +134,66 @@ def gdf_from_records(recs: list[dict]) -> gpd.GeoDataFrame | pd.DataFrame:
     return df
 
 
+# Known TOD Israel sources -> friendly layer names (matched on the raw file stem)
+FRIENDLY = [
+    (re.compile(r"tod_lines|^lines|_lines$"), "lines"),
+    (re.compile(r"radius"), "accessibility_radiuses"),
+    (re.compile(r"metropolin"), "metropolins"),
+    (re.compile(r"munies|municipal"), "municipalities"),
+    (re.compile(r"functional"), "functional_areas"),
+    (re.compile(r"station"), "stations"),
+]
+MODE_ORDER = ["Metro", "LRT", "BRT", "Rail", "Rail fast", "Funicular"]
+MODE_ALIASES = {"FUNI": "Funicular", "HS Rail": "Rail fast", "HSRail": "Rail fast"}
+
+
+def friendly_name(stem: str, data) -> str | None:
+    """Map a raw file to a layer name; None = drop (noise such as bare lat/lng vertex lists)."""
+    low = stem.lower().replace("-", "_")
+    cols = set(map(str, getattr(data, "columns", [])))
+    if isinstance(data, (gpd.GeoDataFrame, pd.DataFrame)):
+        attrs = cols - {"geometry"}
+        if attrs and attrs <= {"lat", "lng", "lon", "x", "y", "latitude", "longitude"}:
+            return None                                  # coordinates only: line vertex paths, no attributes
+        if {"name", "modes", "lat", "lng"} <= cols or {"name", "modes"} <= cols:
+            return "stations"
+    for rx, name in FRIENDLY:
+        if rx.search(low):
+            return name
+    if low.startswith("light_v") or "mapbox" in low or low.startswith("map_style"):
+        return None                                      # basemap style json
+    return re.sub(r"[^A-Za-z0-9_]", "_", stem)[:40].strip("_") or "layer"
+
+
+def enrich_stations(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Explode the JSON 'modes' list into modes text, n_modes and one flag per mode."""
+    g = gdf.copy()
+    if "modes" in g.columns:
+        lists = g["modes"].map(lambda v: json.loads(v) if isinstance(v, str) and v.startswith("[") else (v or []))
+        lists = lists.map(lambda l: [MODE_ALIASES.get(m, m) for m in l])
+        g["modes"] = lists.map(lambda l: " | ".join(l))
+        g["n_modes"] = lists.map(len)
+        for m in MODE_ORDER:
+            g["is_" + re.sub(r"[^A-Za-z]", "", m)] = lists.map(lambda l, m=m: int(m in l))
+        g["mode_main"] = lists.map(lambda l: l[0] if l else None)
+    for c in ("yearOperation", "line_sum", "type_sum", "hub_id"):
+        if c in g.columns:
+            g[c] = pd.to_numeric(g[c], errors="coerce").astype("Int64")
+    if "sourcePlan" in g.columns:
+        g["planning_status"] = g["sourcePlan"].map({"detailed": "Detailed", "strategic": "Strategic",
+                                                   "operating": "Operating"}).fillna(g["sourcePlan"])
+    return g
+
+
+def enrich_lines(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    g = gdf.copy()
+    if "mode" in g.columns:
+        g["mode"] = g["mode"].map(lambda m: MODE_ALIASES.get(m, m))
+    g.insert(0, "line_id", range(1, len(g) + 1))
+    g["length_m"] = g.to_crs(ITM).length.round(1).values
+    return g
+
+
 def load_raw_file(path: Path) -> list[tuple[str, object]]:
     """Return [(layer_name, GeoDataFrame|DataFrame)] parsed from one raw file."""
     name = re.sub(r"[^A-Za-z0-9_]", "_", path.stem)[:40].strip("_") or "layer"
@@ -264,7 +324,9 @@ def write_layers(layers: list[tuple[str, object]], out: Path) -> pd.DataFrame:
                         df["length_m"] = gdf.to_crs(ITM).length.round(1).values
                     else:
                         df["area_m2"] = gdf.to_crs(ITM).area.round(1).values
-                    df["wkt"] = gdf.geometry.to_wkt().values
+                    if "Line" in gtype:                       # polygons: geometry only in shp/gpkg
+                        wkt = gdf.geometry.to_wkt()
+                        df["wkt"] = wkt.where(wkt.str.len() <= 32000, None).values
                 df.to_excel(xw, sheet_name=name[:31], index=False)
                 summary_rows.append({"layer": name, "geometry": gtype, "features": len(gdf),
                                      "fields": ", ".join(map(str, gdf.columns.drop(gdf.geometry.name)))})
@@ -285,6 +347,25 @@ def write_layers(layers: list[tuple[str, object]], out: Path) -> pd.DataFrame:
                     for k, v in data[col].value_counts(dropna=False).items():
                         mode_rows.append({"layer": name, "field": col, "value": k, "count": int(v)})
         summary.to_excel(xw, sheet_name="summary", index=False)
+        st = next((d for n, d in layers if n == "stations"), None)
+        if st is not None:
+            rows = []
+            for m in MODE_ORDER:
+                c = "is_" + re.sub(r"[^A-Za-z]", "", m)
+                if c in st.columns:
+                    rows.append({"mode": m, "stations": int(st[c].sum())})
+            pd.DataFrame(rows).to_excel(xw, sheet_name="stations_by_mode", index=False)
+            piv = []
+            for col in ("planning_status", "metropolin", "metropolin_ring", "yearOperation", "municipality", "n_modes"):
+                if col in st.columns:
+                    for k, v in st[col].value_counts(dropna=False).items():
+                        piv.append({"field": col, "value": k, "stations": int(v)})
+            pd.DataFrame(piv).to_excel(xw, sheet_name="stations_breakdown", index=False)
+        ln = next((d for n, d in layers if n == "lines"), None)
+        if ln is not None and "mode" in ln.columns:
+            (ln.groupby("mode").agg(segments=("mode", "size"), length_km=("length_m", lambda x: round(x.sum() / 1000, 1)))
+               .reindex([m for m in MODE_ORDER if m in set(ln["mode"])]).reset_index()
+               .to_excel(xw, sheet_name="lines_by_mode", index=False))
         if mode_rows:
             pd.DataFrame(mode_rows).to_excel(xw, sheet_name="counts_by_mode", index=False)
         if fieldmap_rows:
@@ -310,6 +391,9 @@ def main() -> int:
 
     layers: list[tuple[str, object]] = []
     seen_hashes: set[str] = set()
+    taken: dict[str, int] = {}          # friendly name -> feature count already kept
+    # map-source dumps first: they are the app's own in-memory data; network copies may be partial
+    files = sorted(files, key=lambda p: (0 if p.name.startswith("mapsource_") else 1, p.name))
     for f in files:
         h = hashlib.md5(f.read_bytes()).hexdigest()
         if h in seen_hashes:            # same payload captured twice (network + map source)
@@ -317,10 +401,26 @@ def main() -> int:
             continue
         seen_hashes.add(h)
         for name, data in load_raw_file(f):
+            fname = friendly_name(name if name.startswith(re.sub(r"[^A-Za-z0-9_]", "_", f.stem)[:40].strip("_") + "_")
+                                  and len(name) > len(f.stem) else f.stem, data)
+            if fname is None:
+                log(f"skip {f.name}: no attributes / basemap")
+                continue
+            n = len(data)
+            if fname in taken:
+                if n <= taken[fname]:
+                    log(f"skip {f.name}: '{fname}' already loaded with {taken[fname]} features")
+                    continue
+                layers = [(ln, ld) for ln, ld in layers if ln != fname and not ln.startswith(fname + "_")]
+            taken[fname] = n
             if isinstance(data, gpd.GeoDataFrame):
-                layers += split_by_geom(name, data)
+                if fname == "stations":
+                    data = enrich_stations(data)
+                elif fname == "lines":
+                    data = enrich_lines(data)
+                layers += split_by_geom(fname, data)
             else:
-                layers.append((name, data))
+                layers.append((fname, data))
     layers = dedupe_names(layers)
 
     # merge point layers sharing a schema -> stations_all

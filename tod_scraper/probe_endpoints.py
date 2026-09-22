@@ -103,7 +103,7 @@ def main() -> int:
         manifest.append({"kind": "network", "url": u, "file": f.name, "bytes": len(r.content), "content_type": ct})
         log(f"saved {len(r.content):>9,d} B  {u}")
 
-    (Path(args.out) / "manifest.json").write_text(json.dumps({"app_url": args.url, "scripts": scripts, "items": manifest}, indent=2))
+    (Path(args.out) / "manifest_probe.json").write_text(json.dumps({"app_url": args.url, "scripts": scripts, "items": manifest}, indent=2))
     log(f"done: {len(manifest)} data files -> {raw}")
     return 0 if manifest else 2
 

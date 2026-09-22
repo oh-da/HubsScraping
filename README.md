@@ -8,6 +8,31 @@ Output: stations, transit lines and area layers as **shapefiles** (WGS84 and
 Israel TM Grid, EPSG:2039), a **GeoPackage**, and an **Excel workbook** with one
 sheet per layer plus a summary and per-mode counts.
 
+## Data already captured (2026-09-22)
+
+`tod_scraper/data/out/` holds the outputs built from the live explorer:
+
+| layer | geometry | features | main fields |
+|---|---|---|---|
+| `stations` | Point | 1,459 | id, name, modes, n_modes, is_Metro/LRT/BRT/Rail/Railfast/Funicular, yearOperation, planning_status (Detailed / Strategic / Operating), municipality, settlement, metropolin, metropolin_ring, tama_35, tamam_yeud, built_landuse_current/planned, hub_id, line_sum, type_sum |
+| `lines` | LineString | 997 | line_id, mode, length_m |
+| `accessibility_radiuses` | MultiPolygon | 3,668 | combinations_radiuses (e.g. "Metro 800 \| Rail 1000"), lines_Metro/LRT/Rail/Rail fast |
+| `municipalities` | Polygon | 314 | CBS municipality attributes plus the app's TOD indicators (pop_2024, stations per mode, hubs, corridor stations, transit_system, cluster_archetype, ...) |
+| `metropolins` | MultiPolygon | 23 | METRO_NAME, ZONE_NAME (core / rings), SEC_NAME |
+| `functional_areas` | Polygon | 28 | Code_Ezor, Name |
+
+Stations per mode: Metro 212, LRT 720, BRT 606, Rail 126, Rail fast 10, Funicular 27
+(a multi-modal station counts once per mode; 1,459 unique stations).
+
+Files: `data/out/shp/<layer>_itm.shp` (EPSG:2039), `data/out/shp/<layer>_wgs84.shp`,
+`data/out/tod_israel.gpkg`, `data/out/tod_israel.xlsx` (sheets per layer + `summary`,
+`stations_by_mode`, `stations_breakdown`, `lines_by_mode`, `shapefile_field_map`).
+Raw captures are in `data/raw/`; the app is marked *Beta* by its authors, so treat the
+data as a working snapshot.
+
+The scrape ran on GitHub Actions (`.github/workflows/scrape.yml`), which commits fresh
+outputs to this branch. Re-run it from the Actions tab ("Run workflow") to refresh.
+
 ## Quick start
 
 ```bash
@@ -69,4 +94,6 @@ only after user interaction, so use it only when Chromium is unavailable.
 * Nested attribute values (for example a station's list of modes) are kept as
   JSON strings so they survive the shapefile format.
 * Hebrew text is written as UTF-8 (`.cpg` sidecar); open with a recent QGIS/ArcGIS.
-* `data/` is git-ignored. Commit outputs deliberately if you want them versioned.
+* `data/` is git-ignored for local runs; the committed snapshot was added with `git add -f`.
+* The station data lives in the app's React state (not a network call), so the JS state
+  scan is what captures it; lines and polygon layers come from the Mapbox sources.
