@@ -1,0 +1,71 @@
+name: Scrape TOD Israel explorer
+
+on:
+  workflow_dispatch:
+    inputs:
+      via_portal:
+        description: "Go through the nsa-hub portal page (password) instead of the app URL"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r tod_scraper/requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Scrape (app URL)
+        id: scrape_direct
+        if: ${{ !inputs.via_portal }}
+        continue-on-error: true
+        working-directory: tod_scraper
+        run: python scrape_tod.py --settle 12
+
+      - name: Scrape (via portal)
+        if: ${{ inputs.via_portal || steps.scrape_direct.outcome != 'success' }}
+        continue-on-error: true
+        working-directory: tod_scraper
+        run: python scrape_tod.py --via-portal --settle 12
+
+      - name: Probe endpoints (fallback, no browser)
+        continue-on-error: true
+        working-directory: tod_scraper
+        run: python probe_endpoints.py
+
+      - name: Build shapefiles / GeoPackage / Excel
+        working-directory: tod_scraper
+        run: python build_outputs.py
+
+      - name: Upload outputs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tod-israel-data
+          path: tod_scraper/data
+          if-no-files-found: warn
+
+      - name: Commit outputs to the branch
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f tod_scraper/data
+          if git diff --cached --quiet; then
+            echo "nothing captured"; exit 0
+          fi
+          git commit -m "Scraped TOD Israel data $(date -u +'%Y-%m-%d %H:%M UTC') [skip ci]"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin HEAD:"${GITHUB_REF_NAME}"
