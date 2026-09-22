@@ -65,10 +65,13 @@ def main() -> int:
 
     # ---- inputs ---------------------------------------------------------------------------------
     ext = pd.read_excel(args.xlsx)
+    if "HubType" in ext.columns:
+        ext = ext[ext["HubType"].astype(str).str.strip() != "Not Hub"]   # rows flagged Not Hub are not hubs
     xcol = next(c for c in ("x", "lon", "lng", "longitude") if c in ext.columns)
     ycol = next(c for c in ("y", "lat", "latitude") if c in ext.columns)
+    ext["xlsx_row"] = ext.index + 2                       # Excel row number for easy lookup (before filtering)
     ext = ext.reset_index(drop=True)
-    ext["xlsx_row"] = ext.index + 2                       # Excel row number for easy lookup
+    ext["TotalDemand_100"] = (ext["TotalDemand"].astype(float) / 100).round() * 100 if "TotalDemand" in ext.columns else np.nan
     ext["modes_norm"] = ext["Mode_Planned"].map(norm_modes) if "Mode_Planned" in ext.columns else [[]] * len(ext)
     gx = gpd.GeoDataFrame(ext, geometry=gpd.points_from_xy(ext[xcol], ext[ycol]), crs="EPSG:4326").to_crs(ITM)
 
@@ -96,7 +99,7 @@ def main() -> int:
 
     # ---- sets -------------------------------------------------------------------------------------
     ext_cols = ["xlsx_row", "group", "HubNameHE", "Metro", "location", "HubType", "Num_Modes", "Overall_Rank",
-                "TotalNumLines", "Mode_Planned", xcol, ycol]
+                "TotalNumLines", "TotalDemand_100", "Mode_Planned", xcol, ycol]
     ext_cols = [c for c in ext_cols if c in gx.columns]
     map_cols = ["hub_id", "id", "name", "n_modes", "modes", "type_sum", "line_sum", "planning_status",
                 "yearOperation", "municipality", "metropolin", "metropolin_ring", "lng", "lat"]
@@ -154,11 +157,11 @@ def main() -> int:
                       "mlat": round(float(r["lat"]), 6), "mlng": round(float(r["lng"]), 6),
                       "xrow": int(r["xlsx_row"]), "xname": str(r.get("xlsx_HubNameHE", "")), "xmodes": r["modes_xlsx"],
                       "xn": int(r.get("xlsx_Num_Modes", 0) or 0), "xrank": r.get("xlsx_Overall_Rank"), "xtype": r.get("xlsx_HubType"),
-                      "xlat": round(float(e.geometry.y), 6), "xlng": round(float(e.geometry.x), 6),
+                      "xdem": r.get("xlsx_TotalDemand_100"), "xlat": round(float(e.geometry.y), 6), "xlng": round(float(e.geometry.x), 6),
                       "d": int(r["dist_m"]), "eq": bool(r["modes_equal"])})
     ox = [{"xrow": int(r["xlsx_row"]), "xname": str(r.get("HubNameHE", "")), "xmodes": " | ".join(norm_modes(r.get("Mode_Planned"))),
            "xn": int(r.get("Num_Modes", 0) or 0), "xrank": r.get("Overall_Rank"), "xtype": r.get("HubType"),
-           "lat": round(float(r.geometry.y), 6), "lng": round(float(r.geometry.x), 6),
+           "xdem": r.get("TotalDemand_100"), "lat": round(float(r.geometry.y), 6), "lng": round(float(r.geometry.x), 6),
            "d": int(r["dist_m"]), "near": r["nearest_map_name"]}
           for _, r in gx4[gx4["xlsx_row"].isin(only_xlsx["xlsx_row"])].iterrows()]
     om = [{"hub": int(r["hub_id"]), "mname": r["name"], "mmodes": r["modes"], "mn": int(r["n_modes"]), "status": r["planning_status"],
@@ -171,7 +174,7 @@ def main() -> int:
         if isinstance(o, (np.integer,)):
             return int(o)
         if isinstance(o, (np.floating,)):
-            return None if np.isnan(o) else float(o)
+            return None if np.isnan(o) else (int(o) if float(o).is_integer() else float(o))
         return o
     dumps = lambda v: json.dumps(v, ensure_ascii=False, separators=(",", ":"), default=clean)
 
@@ -195,7 +198,7 @@ def main() -> int:
 
 
 TEMPLATE = r"""<title>Hub List Comparison</title>
-<meta name="description" content="Multi-modal hubs of the TOD Israel map compared with the hub prioritization list: in both, only in the list, only on the map.">
+<meta name="description" content="Multi-modal hubs of מנהל התכנון (the TOD Israel map) compared with פרויקט תעדוף מתחמים (the hub prioritization list): in both, only in one of them.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
 <style>
 __LEAFLET_CSS__
@@ -254,10 +257,10 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
 .actions button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .note { margin: 10px 0 0; font-size: 11.5px; color: var(--ink-3); }
 .pp h2 { margin: 0 0 6px; font-size: 14px; font-weight: 700; line-height: 1.25; }
-.pp .tag { display: inline-block; font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; padding: 1px 7px; border-radius: 99px; color: #fff; margin-bottom: 6px; }
+.pp .tag { display: inline-block; font-size: 11px; font-weight: 500; letter-spacing: .04em; padding: 1px 7px; border-radius: 99px; color: #fff; margin-bottom: 6px; }
 .pp .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .pp .col { border: 1px solid var(--panel-border); border-radius: 6px; padding: 6px 8px; }
-.pp .col h3 { margin: 0 0 3px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+.pp .col h3 { margin: 0 0 3px; font-size: 11px; letter-spacing: .02em; color: var(--ink-3); font-weight: 500; }
 .pp .col .nm { font-weight: 600; }
 .pp .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 12.5px; margin-top: 6px; }
 .pp .kv dt { color: var(--ink-3); } .pp .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
@@ -270,22 +273,22 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
 @media (prefers-reduced-motion: reduce) { .leaflet-zoom-anim .leaflet-zoom-animated, .leaflet-fade-anim .leaflet-popup { transition: none; } }
 </style>
 
-<div id="map" role="application" aria-label="Map comparing two hub lists"></div>
+<div id="map" role="application" aria-label="Map comparing the hubs of מנהל התכנון with פרויקט תעדוף מתחמים"></div>
 
 <section class="panel" id="panel" aria-label="Sets and legend">
   <h1>Hub list comparison</h1>
-  <p class="sub">__N_M__ map hubs (n_modes ≥ __MINM__) vs __N_X__ hubs in __XLSX_NAME__ · matched within __TOL__ m</p>
+  <p class="sub">__N_M__ <bdi>מנהל התכנון</bdi> hubs (n_modes ≥ __MINM__) vs __N_X__ <bdi>פרויקט תעדוף מתחמים</bdi> hubs · matched within __TOL__ m</p>
   <p class="eyebrow">Sets</p>
   <ul class="sets">
     <li><label><input type="checkbox" id="set-both" checked>
-      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="5" y1="8" x2="17" y2="8" stroke="var(--tie)" stroke-width="1.5"/><circle cx="5" cy="8" r="4.5" fill="var(--both)" stroke="var(--ring)" stroke-width="1.5"/><circle cx="17" cy="8" r="4.5" fill="none" stroke="var(--both)" stroke-width="2.2"/></svg>
-      <span class="lbl">In both<small>filled = map hub · ring = xlsx hub · line = offset</small></span><span class="cnt" id="cnt-both"></span></label></li>
+      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="6" y1="8" x2="16" y2="8" stroke="var(--tie)" stroke-width="1.5"/><circle cx="6" cy="8" r="6" fill="var(--both)" stroke="var(--ring)" stroke-width="1.5"/><circle cx="16" cy="8" r="6" fill="none" stroke="var(--both)" stroke-width="2.2"/></svg>
+      <span class="lbl">In both<small>filled = <bdi>מנהל התכנון</bdi> · ring = <bdi>פרויקט תעדוף מתחמים</bdi> · line = offset</small></span><span class="cnt" id="cnt-both"></span></label></li>
     <li><label><input type="checkbox" id="set-onlyx" checked>
-      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="5" fill="none" stroke="var(--onlyx)" stroke-width="2.4"/></svg>
-      <span class="lbl">Only in xlsx<small>no map hub within __TOL__ m</small></span><span class="cnt" id="cnt-onlyx"></span></label></li>
+      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="6.5" fill="none" stroke="var(--onlyx)" stroke-width="2.4"/></svg>
+      <span class="lbl">Only in <bdi>פרויקט תעדוף מתחמים</bdi><small>no <bdi>מנהל התכנון</bdi> hub within __TOL__ m</small></span><span class="cnt" id="cnt-onlyx"></span></label></li>
     <li><label><input type="checkbox" id="set-onlym" checked>
-      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="5" fill="var(--onlym)" stroke="var(--ring)" stroke-width="1.5"/></svg>
-      <span class="lbl">Only in map<small>no xlsx hub within __TOL__ m</small></span><span class="cnt" id="cnt-onlym"></span></label></li>
+      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="6.5" fill="var(--onlym)" stroke="var(--ring)" stroke-width="1.5"/></svg>
+      <span class="lbl">Only in <bdi>מנהל התכנון</bdi><small>no <bdi>פרויקט תעדוף מתחמים</bdi> hub within __TOL__ m</small></span><span class="cnt" id="cnt-onlym"></span></label></li>
   </ul>
   <div class="actions">
     <button type="button" id="btn-fit">Zoom to all</button>
@@ -293,7 +296,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
     <button type="button" id="btn-hfa">Haifa</button>
     <button type="button" id="btn-jlm">Jerusalem</button>
   </div>
-  <p class="note">Basemap: OpenStreetMap (light gray). Matching is by location only; the popup shows whether the mode sets agree.</p>
+  <p class="note">Basemap: OpenStreetMap (light gray). פרויקט תעדוף מתחמים hubs with HubType = Not Hub are left out. Matching is by location only; the popup shows whether the mode sets agree.</p>
 </section>
 
 <script src="__LEAFLET_JS__"></script>
@@ -309,7 +312,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, className: 'osm-gray'}).addTo(map);
 
   const both = L.layerGroup().addTo(map), onlyx = L.layerGroup().addTo(map), onlym = L.layerGroup().addTo(map);
-  const R = 6;
+  const R = 12;
   const modesLine = (a, b) => a === b ? `<span class="same">modes agree</span>` : `<span class="diff">modes differ</span>`;
 
   PAIRS.forEach(p => {
@@ -318,8 +321,8 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
     const x = L.circleMarker([p.xlat, p.xlng], {radius: R + 1, color: tok('--both'), weight: 2.2, fillColor: tok('--both'), fillOpacity: 0});
     const html = `<div class="pp" dir="auto"><span class="tag" style="background:var(--both)">In both · ${p.d} m apart</span>
       <div class="two">
-        <div class="col"><h3>Map hub ${p.hub}</h3><div class="nm">${esc(p.mname)}</div><div>${esc(p.mmodes)}</div><div>n_modes ${p.mn}</div></div>
-        <div class="col"><h3>xlsx row ${p.xrow}</h3><div class="nm">${esc(p.xname)}</div><div>${esc(p.xmodes)}</div><div>Num_Modes ${p.xn}${p.xrank != null ? ` · rank ${p.xrank}` : ''}${p.xtype ? ` · ${esc(p.xtype)}` : ''}</div></div>
+        <div class="col"><h3><bdi>מנהל התכנון</bdi> · hub ${p.hub}</h3><div class="nm">${esc(p.mname)}</div><div>${esc(p.mmodes)}</div><div>n_modes ${p.mn}</div></div>
+        <div class="col"><h3><bdi>פרויקט תעדוף מתחמים</bdi> · row ${p.xrow}</h3><div class="nm">${esc(p.xname)}</div><div>${esc(p.xmodes)}</div><div>Num_Modes ${p.xn}${p.xrank != null ? ` · rank ${p.xrank}` : ''}${p.xtype ? ` · ${esc(p.xtype)}` : ''}</div>${p.xdem != null ? `<div>Total Demand ${p.xdem.toLocaleString()}</div>` : ''}</div>
       </div><div style="margin-top:6px">${modesLine(p.mmodes, p.xmodes)}</div></div>`;
     m.bindPopup(html, {maxWidth: 360}); x.bindPopup(html, {maxWidth: 360});
     m.bindTooltip(`${p.mname} ↔ ${p.xname} (${p.d} m)`, {direction: 'top', offset: [0, -R]});
@@ -327,19 +330,19 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   });
   ONLYX.forEach(p => {
     const x = L.circleMarker([p.lat, p.lng], {radius: R + 1, color: tok('--onlyx'), weight: 2.4, fillColor: tok('--onlyx'), fillOpacity: .15});
-    x.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--onlyx)">Only in xlsx</span>
-      <h2>${esc(p.xname)}</h2><dl class="kv"><dt>xlsx row</dt><dd>${p.xrow}</dd><dt>modes</dt><dd>${esc(p.xmodes)}</dd><dt>Num_Modes</dt><dd>${p.xn}</dd>
-      ${p.xrank != null ? `<dt>rank</dt><dd>${p.xrank}</dd>` : ''}${p.xtype ? `<dt>HubType</dt><dd>${esc(p.xtype)}</dd>` : ''}
-      <dt>nearest map hub</dt><dd>${esc(p.near)} · ${p.d.toLocaleString()} m</dd></dl></div>`, {maxWidth: 320});
-    x.bindTooltip(`${p.xname} (xlsx only)`, {direction: 'top', offset: [0, -R]});
+    x.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--onlyx)">Only in <bdi>פרויקט תעדוף מתחמים</bdi></span>
+      <h2>${esc(p.xname)}</h2><dl class="kv"><dt>row</dt><dd>${p.xrow}</dd><dt>modes</dt><dd>${esc(p.xmodes)}</dd><dt>Num_Modes</dt><dd>${p.xn}</dd>
+      ${p.xrank != null ? `<dt>rank</dt><dd>${p.xrank}</dd>` : ''}${p.xtype ? `<dt>HubType</dt><dd>${esc(p.xtype)}</dd>` : ''}${p.xdem != null ? `<dt>Total Demand</dt><dd>${p.xdem.toLocaleString()}</dd>` : ''}
+      <dt>nearest <bdi>מנהל התכנון</bdi> hub</dt><dd>${esc(p.near)} · ${p.d.toLocaleString()} m</dd></dl></div>`, {maxWidth: 320});
+    x.bindTooltip(`${p.xname} (פרויקט תעדוף מתחמים only)`, {direction: 'top', offset: [0, -R]});
     onlyx.addLayer(x);
   });
   ONLYM.forEach(p => {
     const m = L.circleMarker([p.lat, p.lng], {radius: R, color: tok('--ring'), weight: 1.5, fillColor: tok('--onlym'), fillOpacity: .95});
-    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--onlym)">Only in map</span>
+    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--onlym)">Only in <bdi>מנהל התכנון</bdi></span>
       <h2>${esc(p.mname)}</h2><dl class="kv"><dt>hub_id</dt><dd>${p.hub}</dd><dt>modes</dt><dd>${esc(p.mmodes)}</dd><dt>n_modes</dt><dd>${p.mn}</dd>
-      <dt>status</dt><dd>${esc(p.status)}</dd><dt>nearest xlsx hub</dt><dd>${esc(p.near)} · ${p.d.toLocaleString()} m</dd></dl></div>`, {maxWidth: 320});
-    m.bindTooltip(`${p.mname} (map only)`, {direction: 'top', offset: [0, -R]});
+      <dt>status</dt><dd>${esc(p.status)}</dd><dt>nearest <bdi>פרויקט תעדוף מתחמים</bdi> hub</dt><dd>${esc(p.near)} · ${p.d.toLocaleString()} m</dd></dl></div>`, {maxWidth: 320});
+    m.bindTooltip(`${p.mname} (מנהל התכנון only)`, {direction: 'top', offset: [0, -R]});
     onlym.addLayer(m);
   });
   document.getElementById('cnt-both').textContent = `${PAIRS.length} pairs`;

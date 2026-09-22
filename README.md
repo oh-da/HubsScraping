@@ -53,7 +53,7 @@ Rebuild the map after a new scrape with
 ## Comparing with an external hub list
 
 `tod_scraper/compare_hubs.py` matches a hub list (xlsx with x/y in WGS84, e.g. the
-hub prioritization results) against the map's multi-modal hubs (hub_id set,
+hub prioritization results, rows with HubType = Not Hub dropped) against the map's multi-modal hubs (hub_id set,
 n_modes >= 2) by location, 400 m tolerance by default:
 
 ```bash
