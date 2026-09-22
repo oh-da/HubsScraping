@@ -35,18 +35,18 @@ jobs:
         if: ${{ !inputs.via_portal }}
         continue-on-error: true
         working-directory: tod_scraper
-        run: python scrape_tod.py --settle 12
+        run: timeout -k 15 600 python scrape_tod.py --settle 12
 
       - name: Scrape (via portal)
         if: ${{ inputs.via_portal || steps.scrape_direct.outcome != 'success' }}
         continue-on-error: true
         working-directory: tod_scraper
-        run: python scrape_tod.py --via-portal --settle 12
+        run: timeout -k 15 600 python scrape_tod.py --via-portal --settle 12 --out data_portal && cp -rn data_portal/raw/. data/raw/ || true
 
       - name: Probe endpoints (fallback, no browser)
         continue-on-error: true
         working-directory: tod_scraper
-        run: python probe_endpoints.py
+        run: timeout -k 15 300 python probe_endpoints.py
 
       - name: Build shapefiles / GeoPackage / Excel
         working-directory: tod_scraper

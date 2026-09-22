@@ -35,6 +35,7 @@ import hashlib
 import os
 import json
 import re
+import signal
 import sys
 import time
 from pathlib import Path
@@ -226,7 +227,10 @@ async () => {
         // mapbox keeps the original data on _data (object or URL string)
         let d = src && src._data;
         if (typeof d === 'string') {
-          try { d = await (await fetch(d)).json(); } catch (e) { d = {fetchError: String(e), url: d}; }
+          try {
+            const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 20000);
+            d = await (await fetch(d, {signal: ac.signal})).json(); clearTimeout(t);
+          } catch (e) { d = {fetchError: String(e), url: d}; }
         }
         if (!d || (d && d.fetchError)) {
           // fall back to what is currently rendered
@@ -264,7 +268,8 @@ def dump_map_sources(page: Page, cap: Capture) -> dict:
     try:
         page.evaluate("b => window.__todMap.fitBounds(b, {padding: 20, duration: 0})", ISRAEL_BOUNDS)
         page.wait_for_timeout(1500)
-        page.evaluate("() => new Promise(r => window.__todMap.once('idle', r))")
+        page.evaluate("() => Promise.race([new Promise(r => window.__todMap.once('idle', r)), "
+                      "new Promise(r => setTimeout(r, 8000))])")
     except Exception as exc:  # noqa: BLE001
         log(f"warn: fitBounds/idle failed: {exc}")
     dump = page.evaluate(DUMP_SOURCES_JS)
@@ -333,12 +338,21 @@ def main() -> int:
     ap.add_argument("--headed", action="store_true", help="show the browser window")
     ap.add_argument("--settle", type=int, default=8, help="seconds to wait after load for XHRs to finish")
     ap.add_argument("--no-toggle", action="store_true", help="do not click the layer toggles")
+    ap.add_argument("--max-seconds", type=int, default=480,
+                    help="hard watchdog: abort the run after this many seconds (captures already on disk are kept)")
     ap.add_argument("--chromium", default=os.environ.get("TOD_CHROMIUM"),
                     help="path to a Chromium/Chrome executable (default: Playwright's own download)")
     args = ap.parse_args()
 
     out = Path(args.out)
     cap = Capture(out)
+    if hasattr(signal, "SIGALRM"):
+        def _bail(signum, frame):  # noqa: ARG001
+            log(f"watchdog: {args.max_seconds}s elapsed - aborting (manifest so far is saved)")
+            cap.save_manifest({"app_url": args.url, "aborted": True})
+            os._exit(3)
+        signal.signal(signal.SIGALRM, _bail)
+        signal.alarm(args.max_seconds)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=not args.headed, executable_path=args.chromium or None)
