@@ -127,7 +127,7 @@ __LEAFLET_CSS__
 :root {
   color-scheme: light;
   --bg: #f4f3ef; --panel: #fffefb; --panel-border: #dcd9d0; --ink: #1c1b18; --ink-2: #5b5950; --ink-3: #8a877c;
-  --map-bg: #e6e4dc; --muni-line: #a9a596; --muni-fill: #f6f5f0; --shadow: 0 4px 18px rgba(30,28,20,.16);
+  --map-bg: #e9e9e9; --muni-line: #a3a3a3; --muni-fill: #f4f4f4; --shadow: 0 4px 18px rgba(30,28,20,.16);
   --accent: #2a78d6; --focus: #2a78d6;
   --g1: #2a78d6; --g2: #eb6834; --g3: #1baf7a; --g4: #eda100; --g5: #e87ba4; --g6: #008300;
   --ln-metro: #d3286f; --ln-lrt: #1f6b5c; --ln-brt: #2fb3a3; --ln-rail: #2d3f6b; --ln-funi: #7b4ac7;
@@ -137,7 +137,7 @@ __LEAFLET_CSS__
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #17171a; --panel: #212125; --panel-border: #3a3a40; --ink: #f2f1ea; --ink-2: #c3c2b7; --ink-3: #8b8a82;
-    --map-bg: #1b1b1f; --muni-line: #45454e; --muni-fill: #242429; --shadow: 0 4px 18px rgba(0,0,0,.5);
+    --map-bg: #e9e9e9; --muni-line: #a3a3a3; --muni-fill: #f4f4f4; --shadow: 0 4px 18px rgba(0,0,0,.5);
     --accent: #3987e5; --focus: #3987e5;
     --g1: #3987e5; --g2: #d95926; --g3: #199e70; --g4: #c98500; --g5: #d55181; --g6: #008300;
     --ln-metro: #e0508a; --ln-lrt: #3f9c88; --ln-brt: #3fc7b6; --ln-rail: #7d93c9; --ln-funi: #a684e0;
@@ -147,7 +147,7 @@ __LEAFLET_CSS__
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #17171a; --panel: #212125; --panel-border: #3a3a40; --ink: #f2f1ea; --ink-2: #c3c2b7; --ink-3: #8b8a82;
-  --map-bg: #1b1b1f; --muni-line: #45454e; --muni-fill: #242429; --shadow: 0 4px 18px rgba(0,0,0,.5);
+  --map-bg: #e9e9e9; --muni-line: #a3a3a3; --muni-fill: #f4f4f4; --shadow: 0 4px 18px rgba(0,0,0,.5);
   --accent: #3987e5; --focus: #3987e5;
   --g1: #3987e5; --g2: #d95926; --g3: #199e70; --g4: #c98500; --g5: #d55181; --g6: #008300;
   --ln-metro: #e0508a; --ln-lrt: #3f9c88; --ln-brt: #3fc7b6; --ln-rail: #7d93c9; --ln-funi: #a684e0;
@@ -157,6 +157,8 @@ html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heebo", "Segoe UI", system-ui, sans-serif; }
 #map { position: absolute; inset: 0; background: var(--map-bg); }
 .leaflet-container { background: var(--map-bg); font: inherit; }
+.osm-gray { filter: grayscale(1) brightness(1.06) contrast(0.88); }
+:root[data-theme="dark"] .osm-gray { filter: grayscale(1) brightness(1.06) contrast(0.88); }
 .leaflet-bar { box-shadow: var(--shadow); border: 1px solid var(--panel-border); }
 .leaflet-bar a { background: var(--panel); color: var(--ink); border-bottom-color: var(--panel-border); }
 .leaflet-bar a:hover, .leaflet-bar a:focus-visible { background: var(--bg); }
@@ -236,7 +238,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
     <label><input type="checkbox" id="ctx-lines" checked> Transit lines
       <span class="line-key" aria-hidden="true"><i style="background:var(--ln-metro)"></i><i style="background:var(--ln-lrt)"></i><i style="background:var(--ln-brt)"></i><i style="background:var(--ln-rail)"></i><i style="background:var(--ln-funi)"></i></span></label>
     <label><input type="checkbox" id="ctx-munis" checked> Municipal boundaries</label>
-    <label><input type="checkbox" id="ctx-tiles" checked> Street basemap</label>
+    <label><input type="checkbox" id="ctx-tiles" checked> OpenStreetMap (light gray)</label>
   </div>
 
   <div class="actions">
@@ -264,16 +266,15 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   const map = L.map('map', {zoomControl: false, preferCanvas: true, attributionControl: true});
   L.control.zoom({position: 'topright'}).addTo(map);
   map.attributionControl.setPrefix('');
-  map.attributionControl.addAttribution('Data: TOD Israel explorer (beta) · Basemap © OpenStreetMap contributors © CARTO');
-  const isDark = () => matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.dataset.theme !== 'light' || document.documentElement.dataset.theme === 'dark';
-  const tileUrl = () => isDark()
-    ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-  let tiles = L.tileLayer(tileUrl(), {maxZoom: 19, subdomains: 'abcd', opacity: 0.85}).addTo(map);
+  map.attributionControl.addAttribution('Data: TOD Israel explorer (beta) · Basemap © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors');
+    // OpenStreetMap standard tiles, rendered light gray through a CSS filter (same look in both themes)
+  const OSM = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const makeTiles = () => L.tileLayer(OSM, {maxZoom: 19, className: 'osm-gray', opacity: 1});
+  let tiles = makeTiles().addTo(map);
 
   // ---- context layers --------------------------------------------------------------------
   const munisLayer = L.geoJSON(MUNIS, {
-    style: () => ({color: tok('--muni-line'), weight: 0.7, fillColor: tok('--muni-fill'), fillOpacity: 0.55, interactive: false})
+    style: () => ({color: tok('--muni-line'), weight: 0.7, fillColor: tok('--muni-fill'), fillOpacity: 0, interactive: false})
   }).addTo(map);
   const linesLayer = L.geoJSON(LINES, {
     style: f => ({color: tok(MODE_COLOR[f.properties.mode] || '--ink-3'), weight: 1.6, opacity: 0.55, interactive: false})
@@ -335,7 +336,10 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   document.getElementById('btn-fit').addEventListener('click', () => map.fitBounds(hubBounds, {padding: [30, 30]}));
   document.getElementById('ctx-lines').addEventListener('change', e => e.target.checked ? linesLayer.addTo(map) : map.removeLayer(linesLayer));
   document.getElementById('ctx-munis').addEventListener('change', e => e.target.checked ? munisLayer.addTo(map) : map.removeLayer(munisLayer));
-  document.getElementById('ctx-tiles').addEventListener('change', e => e.target.checked ? tiles.addTo(map) : map.removeLayer(tiles));
+  document.getElementById('ctx-tiles').addEventListener('change', e => {
+    e.target.checked ? tiles.addTo(map) : map.removeLayer(tiles);
+    munisLayer.setStyle({fillOpacity: e.target.checked ? 0 : 0.55});   // boundaries carry the ground when tiles are off
+  });
   const panel = document.getElementById('panel'), tg = document.getElementById('panel-toggle');
   tg.addEventListener('click', () => { const c = panel.classList.toggle('collapsed'); tg.textContent = c ? 'Show' : 'Hide'; tg.setAttribute('aria-expanded', String(!c)); });
   // keep the panel from stealing map drags
@@ -346,8 +350,6 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
     munisLayer.setStyle({color: tok('--muni-line'), fillColor: tok('--muni-fill')});
     linesLayer.setStyle(f => ({color: tok(MODE_COLOR[f.properties.mode] || '--ink-3')}));
     GROUPS.forEach(g => groupLayers[g].eachLayer(m => m.setStyle({fillColor: tok('--g' + g), color: tok('--ring')})));
-    const had = map.hasLayer(tiles); map.removeLayer(tiles);
-    tiles = L.tileLayer(tileUrl(), {maxZoom: 19, subdomains: 'abcd', opacity: 0.85}); if (had) tiles.addTo(map);
   };
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', restyle);
   new MutationObserver(restyle).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
