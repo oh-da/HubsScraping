@@ -33,6 +33,20 @@ data as a working snapshot.
 The scrape ran on GitHub Actions (`.github/workflows/scrape.yml`), which commits fresh
 outputs to this branch. Re-run it from the Actions tab ("Run workflow") to refresh.
 
+## Hub stations map (GitHub Pages)
+
+`tod_scraper/make_hub_map.py` builds `data/out/hub_stations_map.html`: the 432 hub
+stations (hub_id not null), one toggleable layer per `type_sum`, popups with
+`n_modes` and the modes served. `.github/workflows/pages.yml` deploys it to GitHub
+Pages whenever the map or the workbook changes (or from the Actions tab):
+
+* map: https://oh-da.github.io/HubsScraping/ (also `/hub_stations_map.html`)
+* workbook download: https://oh-da.github.io/HubsScraping/tod_israel.xlsx
+
+Rebuild the map after a new scrape with
+`python make_hub_map.py --leaflet-css <path to leaflet.css>` (get the CSS with
+`npm pack leaflet@1.9.4`).
+
 ## Quick start
 
 ```bash
