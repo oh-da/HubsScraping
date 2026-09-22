@@ -53,6 +53,8 @@ def main() -> int:
     ap.add_argument("--out", default=None, help="output html (default <data>/out/hub_stations_map.html)")
     ap.add_argument("--leaflet-css", required=True, help="path to leaflet.css to inline")
     ap.add_argument("--leaflet-js", default=LEAFLET_JS, help="script src for leaflet.js")
+    ap.add_argument("--copy-to", default=None,
+                    help="also write the page to this path (e.g. the repo-root index.html served by GitHub Pages)")
     ap.add_argument("--fragment", action="store_true",
                     help="emit only the page body (for the claude.ai artifact wrapper) instead of a full document")
     args = ap.parse_args()
@@ -109,6 +111,9 @@ def main() -> int:
                 + "\n</body>\n</html>\n")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
+    if args.copy_to:
+        Path(args.copy_to).write_text(html, encoding="utf-8")
+        print(f"copied to {args.copy_to}")
     print(f"wrote {out} ({out.stat().st_size/1e6:.2f} MB): {len(rows)} hub stations, "
           f"{len(lines['features'])} line segments, {len(munis['features'])} municipalities; type_sum counts {counts}")
     return 0
