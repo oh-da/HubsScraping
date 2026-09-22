@@ -52,6 +52,13 @@ jobs:
         working-directory: tod_scraper
         run: python build_outputs.py
 
+      - name: Redact any access tokens before publishing
+        if: always()
+        run: |
+          find tod_scraper/data -type f -size +8M -path '*/bundles/*' -delete || true
+          grep -rlIE '\b(sk|pk)\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}' tod_scraper/data 2>/dev/null \
+            | xargs -r sed -i -E 's/\b(sk|pk)\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}/<MAPBOX_TOKEN_REDACTED>/g'
+
       - name: Upload outputs as artifact
         if: always()
         uses: actions/upload-artifact@v4
