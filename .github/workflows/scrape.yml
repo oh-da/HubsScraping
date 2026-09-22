@@ -1,6 +1,9 @@
 name: Scrape TOD Israel explorer
 
 on:
+  push:
+    branches: [claude/sleepy-allen-npyjnv]
+    paths-ignore: ["tod_scraper/data/**"]
   workflow_dispatch:
     inputs:
       via_portal:
