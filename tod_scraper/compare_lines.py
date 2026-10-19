@@ -53,7 +53,7 @@ ITM = "EPSG:2039"
 MODES = ["Metro", "LRT", "BRT", "Rail", "Funicular"]
 # line-name prefix -> mode hint (only reported, never used for matching)
 HINTS = [(r"^rail", "Rail"), (r"^(brt|BRT|BluRT|RH-GY)", "BRT"), (r"^(lrt|LRT)", "LRT"), (r"_LRT_", "LRT"),
-         (r"^(M1|Me0|m0)", "Metro"), (r"^(c0|s0)", "Funicular")]
+         (r"^(M1|Me0)", "Metro"), (r"^(c0|s0)", "Funicular")]      # m0xxx are Haifa's Metronit (BRT), no hint
 
 
 def mode_hint(line_id: str) -> str:
