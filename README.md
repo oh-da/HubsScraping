@@ -66,41 +66,48 @@ possible_matches) and `data/out/hub_comparison_map.html` (also served at
 https://oh-da.github.io/HubsScraping/compare.html), which draws each matched pair
 one on top of the other with a tie line showing the offset.
 
-## Comparing the transit lines with an external network
+## Comparing the transit lines: Hubs project vs Minhal
 
-`Data/All_nodes+lines_V1.01.csv` is the line network of the hub prioritization project
-(HubsPrioritizing): one row per node x line (`node`, `LINE_ID`, `X`, `Y` in EPSG:2039),
-no route geometry and no stop order. `tod_scraper/compare_lines.py` compares it with the
-map's `lines` and `stations` layers by geometry only (the line names of the two sources
-do not correspond and are never compared):
+Two sources are compared:
 
-1. **offset**: the sources do not sit exactly on top of each other (about 50 m in the
-   centre, 70 m in the north, 20 m the other way in the south). A local shift field
-   (median node to station offset within 10 km) is estimated and applied to the nodes
-   first; raw and corrected distances are both kept.
-2. **mode**: the mode of an external line is the mode whose map lines run under most of
-   its nodes (the name prefix is only reported as a hint, `mode_hint_differs` flags
-   e.g. a "BRT" line that runs on the map's LRT).
-3. **nodes**: each node is matched to the nearest map station (150 m) and map line
-   (100 m, Rail 250 m).
-4. **routing**: the stops of each line are ordered (shortest path through them) and each
-   consecutive pair is routed along the map network of the line's mode. No path, a map
-   route 1.5x longer than the straight line, or a stop off the network is a difference.
-5. **reverse**: map stations with no node nearby, and stretches (>= 300 m) of the map
-   network that no external line uses (parallel carriageways of a used line excluded).
+* **Hubs project** (HubsPrioritizing): `Data/All_nodes+lines_V1.01.csv`, one row per node x
+  line (`node`, `LINE_ID`, `X`, `Y` in EPSG:2039), no route geometry and no stop order.
+* **Minhal** (מנהל התכנון): the `lines` and `stations` layers scraped from the TOD Israel map
+  by this repository (`tod_israel.gpkg` / `tod_israel.xlsx`).
+
+`tod_scraper/compare_lines.py` compares them by geometry only (the line names of the two
+sources do not correspond and are never compared):
+
+1. **offset**: the sources do not sit exactly on top of each other (Hubs nodes are about
+   60 m west and 37 m south of the Minhal stations in Tel Aviv and Haifa, 21 m east and
+   37 m north in Be'er Sheva, on the spot in Jerusalem). A local shift field (median
+   node to station offset within 10 km) is estimated and applied to the Hubs nodes first;
+   raw and corrected distances are both kept.
+2. **mode**: the mode of a Hubs line is the mode whose Minhal lines run under most of its
+   nodes (the name prefix is only reported as a hint, `mode_hint_differs` flags e.g. a
+   "BRT" line that runs on Minhal's LRT).
+3. **nodes**: each Hubs node is matched to the nearest Minhal station (150 m) and Minhal
+   line (100 m, Rail 250 m).
+4. **routing**: the stops of each Hubs line are ordered (shortest path through them) and
+   each consecutive pair is routed along the Minhal network of the line's mode. No path, a
+   Minhal route 1.5x longer than the straight line, or a stop off the Minhal network is a
+   difference.
+5. **reverse**: Minhal stations with no Hubs node nearby, and stretches (>= 300 m) of the
+   Minhal network that no Hubs line uses (parallel carriageways of a used line excluded).
 
 ```bash
 python compare_lines.py ../Data/All_nodes+lines_V1.01.csv \
     --leaflet-css <leaflet.css> --copy-map-to ../compare_lines.html
 ```
 
-Outputs `data/out/line_comparison.xlsx` (sheets: summary, shift, lines, stop_pairs, nodes,
-only_map_stations, only_map_lines, map_coverage), `data/out/line_comparison.gpkg`
-(external_routes, external_stop_pairs, external_nodes, external_nodes_raw, map_lines_used,
-only_map_lines, only_map_stations; EPSG:2039) and `data/out/line_comparison_map.html`
-(also served at https://oh-da.github.io/HubsScraping/compare_lines.html): the external
-lines routed over the map, node to station ties, routing differences, map stretches and
-stations the external network lacks, with a picker to isolate one line or one status.
+Outputs `data/out/line_comparison.xlsx` (sheets: summary, shift, hubs_lines, hubs_stop_pairs,
+hubs_nodes, only_minhal_stations, only_minhal_lines, minhal_coverage),
+`data/out/line_comparison.gpkg` (hubs_routes, hubs_stop_pairs, hubs_nodes, hubs_nodes_raw,
+minhal_lines_used, only_minhal_lines, only_minhal_stations; EPSG:2039) and
+`data/out/line_comparison_map.html` (also served at
+https://oh-da.github.io/HubsScraping/compare_lines.html): the Hubs lines routed over Minhal,
+node to station ties, routing differences, Minhal stretches and stations the Hubs project
+lacks, with a picker to isolate one line or one status.
 
 ## Quick start
 

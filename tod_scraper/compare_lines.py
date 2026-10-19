@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
 """
-Compare an external transit network (csv of node x line memberships, ITM coordinates)
-with the lines and stations of the TOD Israel map, by geometry only.
+Compare the transit network of the Hubs project (HubsPrioritizing: csv of node x line
+memberships, ITM coordinates) with the lines and stations of Minhal (the TOD Israel map
+of מנהל התכנון scraped by this repository), by geometry only.
 
-The external file (Data/All_nodes+lines_V1.01.csv) lists, per line id, the model nodes
-the line stops at. It has no route geometry, no stop order and its line names do not
-follow the map's naming, so nothing here relies on names:
+The Hubs project file (Data/All_nodes+lines_V1.01.csv) lists, per line id, the model
+nodes the line stops at. It has no route geometry, no stop order and its line names do
+not follow Minhal's naming, so nothing here relies on names:
 
 1. offset  - the two sources do not sit exactly on top of each other. A local shift
              field (median node -> station offset of the matched pairs within
-             --shift-radius) is estimated and applied to the external nodes before
+             --shift-radius) is estimated and applied to the Hubs nodes before
              anything else is measured; the raw and corrected distances are both kept.
-2. mode    - the mode of an external line is taken from the map: the mode whose map
+2. mode    - the mode of a Hubs line is taken from Minhal: the mode whose Minhal
              lines run within --tol-line of most of its nodes (the line-name prefix is
              reported only as a hint).
-3. nodes   - every node is matched to the nearest map station (<= --tol-station) and
-             to the nearest map line of each mode (<= --tol-line).
+3. nodes   - every Hubs node is matched to the nearest Minhal station (<= --tol-station)
+             and to the nearest Minhal line of each mode (<= --tol-line).
 4. routing - the nodes of a line are ordered (shortest open path through them) and
-             each consecutive pair is routed along the map network of the line's mode.
-             A pair with no path, or whose map route is much longer than the straight
-             distance, is a routing difference; a node that is not on the map network
+             each consecutive pair is routed along the Minhal network of the line's mode.
+             A pair with no path, or whose Minhal route is much longer than the straight
+             distance, is a routing difference; a node that is not on the Minhal network
              is reported as off-network.
-5. reverse - map stations with no external node nearby, and stretches of the map
-             network (>= --min-gap metres) that no routed external line uses.
+5. reverse - Minhal stations with no Hubs node nearby, and stretches of the Minhal
+             network (>= --min-gap metres) that no routed Hubs line uses.
 
 Outputs data/out/line_comparison.xlsx, data/out/line_comparison.gpkg and
 data/out/line_comparison_map.html (an interactive map of all of the above).
@@ -66,7 +67,7 @@ def mode_hint(line_id: str) -> str:
 # ---------------------------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------------------------
-def read_external(path: Path) -> pd.DataFrame:
+def read_hubs(path: Path) -> pd.DataFrame:
     for enc in ("utf-8-sig", "cp1255", "latin-1"):
         try:
             df = pd.read_csv(path, encoding=enc)
@@ -147,7 +148,7 @@ def order_points(xy: np.ndarray) -> list[int]:
 
 
 class ModeNetwork:
-    """The map lines of one mode as a routable graph (noded, endpoints within join_tol joined)."""
+    """The Minhal lines of one mode as a routable graph (noded, endpoints within join_tol joined)."""
 
     def __init__(self, geoms, join_tol: float = 20.0):
         u = unary_union(list(geoms))
@@ -247,16 +248,16 @@ def rc(g, nd=5):
 # ---------------------------------------------------------------------------------------------
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("csv", help="external node x line csv (node, LINE_ID, X, Y in EPSG:2039)")
+    ap.add_argument("csv", help="Hubs project node x line csv (node, LINE_ID, X, Y in EPSG:2039)")
     ap.add_argument("--data", default="data")
-    ap.add_argument("--tol-station", type=float, default=150, help="node <-> map station match radius (m, after shift)")
-    ap.add_argument("--tol-line", type=float, default=100, help="node <-> map line radius (m): on the network / mode vote")
+    ap.add_argument("--tol-station", type=float, default=150, help="Hubs node <-> Minhal station match radius (m, after shift)")
+    ap.add_argument("--tol-line", type=float, default=100, help="Hubs node <-> Minhal line radius (m): on the network / mode vote")
     ap.add_argument("--tol-line-rail", type=float, default=250, help="same for Rail (stations sit further from the drawn track)")
     ap.add_argument("--parallel-tol", type=float, default=60, help="an unused map stretch this close to a used one of the same mode is a parallel duplicate, not a gap")
     ap.add_argument("--near", type=float, default=400, help="upper radius for 'possible' station matches (m)")
-    ap.add_argument("--detour", type=float, default=1.5, help="map route / straight distance above which a stop pair is a routing difference")
+    ap.add_argument("--detour", type=float, default=1.5, help="Minhal route / straight distance above which a stop pair is a routing difference")
     ap.add_argument("--detour-min", type=float, default=300, help="... and the extra length must exceed this many metres")
-    ap.add_argument("--min-gap", type=float, default=300, help="report map network stretches no external line uses from this length (m)")
+    ap.add_argument("--min-gap", type=float, default=300, help="report Minhal network stretches no Hubs line uses from this length (m)")
     ap.add_argument("--shift", choices=["local", "global", "none"], default="local")
     ap.add_argument("--shift-radius", type=float, default=10000)
     ap.add_argument("--shift-min-pairs", type=int, default=15)
@@ -268,7 +269,7 @@ def main() -> int:
     out_dir = data / "out"
 
     # ---- inputs ---------------------------------------------------------------------------------
-    ext = read_external(Path(args.csv))
+    ext = read_hubs(Path(args.csv))
     nodes = ext.drop_duplicates("node")[["node", "X", "Y"]].reset_index(drop=True)
     nodes["lines"] = nodes["node"].map(ext.groupby("node")["LINE_ID"].agg(list))
     N = nodes[["X", "Y"]].to_numpy(float)
@@ -282,8 +283,8 @@ def main() -> int:
     ln = ln[ln.geometry.notna() & (ln.geometry.length > 0)].reset_index(drop=True)
     nets = {m: ModeNetwork(ln.loc[ln["mode"] == m, "geometry"]) for m in MODES if (ln["mode"] == m).any()}
     unions = {m: unary_union(list(ln.loc[ln["mode"] == m, "geometry"])) for m in nets}
-    print(f"external: {len(ext)} node x line rows, {len(nodes)} nodes, {ext['LINE_ID'].nunique()} lines; "
-          f"map: {len(st)} stations, {len(ln)} line segments ({', '.join(f'{m} {len(nets[m].coords)} vertices' for m in nets)})")
+    print(f"Hubs project: {len(ext)} node x line rows, {len(nodes)} nodes, {ext['LINE_ID'].nunique()} lines; "
+          f"Minhal: {len(st)} stations, {len(ln)} line segments ({', '.join(f'{m} {len(nets[m].coords)} vertices' for m in nets)})")
 
     # ---- 1. offset between the sources --------------------------------------------------------
     if args.shift == "none":
@@ -301,36 +302,36 @@ def main() -> int:
     d_raw, _ = stree.query(N)
     d_adj, i_adj = stree.query(A)
     nodes["x_adj"], nodes["y_adj"] = A[:, 0].round(1), A[:, 1].round(1)
-    nodes["dist_station_raw_m"] = d_raw.round(0)
-    nodes["dist_station_m"] = d_adj.round(0)
-    nodes["station_id"] = st.loc[i_adj, "id"].values
-    nodes["station_name"] = st.loc[i_adj, "name"].values
-    nodes["station_modes"] = st.loc[i_adj, "modes"].values
-    nodes["station_status"] = st.loc[i_adj, "planning_status"].values
-    nodes["station_metropolin"] = st.loc[i_adj, "metropolin"].values if "metropolin" in st.columns else None
-    nodes["station_match"] = nodes["dist_station_m"] <= args.tol_station
-    nodes["station_possible"] = (~nodes["station_match"]) & (nodes["dist_station_m"] <= args.near)
+    nodes["dist_minhal_station_raw_m"] = d_raw.round(0)
+    nodes["dist_minhal_station_m"] = d_adj.round(0)
+    nodes["minhal_station_id"] = st.loc[i_adj, "id"].values
+    nodes["minhal_station_name"] = st.loc[i_adj, "name"].values
+    nodes["minhal_station_modes"] = st.loc[i_adj, "modes"].values
+    nodes["minhal_station_status"] = st.loc[i_adj, "planning_status"].values
+    nodes["minhal_station_metropolin"] = st.loc[i_adj, "metropolin"].values if "metropolin" in st.columns else None
+    nodes["minhal_station_match"] = nodes["dist_minhal_station_m"] <= args.tol_station
+    nodes["minhal_station_possible"] = (~nodes["minhal_station_match"]) & (nodes["dist_minhal_station_m"] <= args.near)
     TOL = {m: (args.tol_line_rail if m == "Rail" else args.tol_line) for m in unions}
     apts = shapely.points(A)
     for m, u in unions.items():
-        nodes[f"dist_line_{m}_m"] = shapely.distance(apts, u).round(0)
-    dl = nodes[[f"dist_line_{m}_m" for m in unions]]
-    nodes["dist_line_m"] = dl.min(axis=1)
-    nodes["map_modes_near"] = [" | ".join(m for m in unions if r[f"dist_line_{m}_m"] <= TOL[m]) for _, r in nodes.iterrows()]
-    nodes["on_map_network"] = nodes["map_modes_near"] != ""
+        nodes[f"dist_minhal_line_{m}_m"] = shapely.distance(apts, u).round(0)
+    dl = nodes[[f"dist_minhal_line_{m}_m" for m in unions]]
+    nodes["dist_minhal_line_m"] = dl.min(axis=1)
+    nodes["minhal_modes_near"] = [" | ".join(m for m in unions if r[f"dist_minhal_line_{m}_m"] <= TOL[m]) for _, r in nodes.iterrows()]
+    nodes["on_minhal_network"] = nodes["minhal_modes_near"] != ""
     nodes["n_lines"] = nodes["lines"].map(len)
     nodes["lines_str"] = nodes["lines"].map(" | ".join)
 
     # shift by metropolitan area (for the summary)
-    region = nodes["station_metropolin"].fillna("other")
-    matched = nodes["station_match"]
+    region = nodes["minhal_station_metropolin"].fillna("other")
+    matched = nodes["minhal_station_match"]
     shift_rows = []
     for reg, grp in nodes[matched].groupby(region[matched]):
         off = S[i_adj[grp.index]] - N[grp.index]
         shift_rows.append({"area": reg, "matched nodes": len(grp), "median dx (m)": round(float(np.median(off[:, 0])), 1),
                            "median dy (m)": round(float(np.median(off[:, 1])), 1),
-                           "offset after shift, median (m)": round(float(np.median(grp["dist_station_m"])), 1),
-                           "offset after shift, 90th pct (m)": round(float(np.percentile(grp["dist_station_m"], 90)), 1)})
+                           "offset after shift, median (m)": round(float(np.median(grp["dist_minhal_station_m"])), 1),
+                           "offset after shift, 90th pct (m)": round(float(np.percentile(grp["dist_minhal_station_m"], 90)), 1)})
     shift_tbl = pd.DataFrame(shift_rows)
 
     # ---- 4. lines: mode vote, order, routing ---------------------------------------------------
@@ -344,10 +345,10 @@ def main() -> int:
         idx = [nidx[n] for n in mem]
         sub = nodes.loc[idx]
         hint = mode_hint(lid)
-        votes = {m: int((sub[f"dist_line_{m}_m"] <= TOL[m]).sum()) for m in unions}
+        votes = {m: int((sub[f"dist_minhal_line_{m}_m"] <= TOL[m]).sum()) for m in unions}
         top = max(votes.values()) if votes else 0
         cands = [m for m, v in votes.items() if v == top and v > 0]
-        st_modes = " | ".join(sub.loc[sub["station_match"], "station_modes"].astype(str))
+        st_modes = " | ".join(sub.loc[sub["minhal_station_match"], "minhal_station_modes"].astype(str))
         if not cands:
             mode = ""
         elif len(cands) == 1 or hint in cands:
@@ -385,15 +386,15 @@ def main() -> int:
                 r["segs"].append(seg)
             routes[key] = r
         n = len(idx)
-        n_st = int(sub["station_match"].sum())
+        n_st = int(sub["minhal_station_match"].sum())
         n_on = votes.get(mode, 0) if mode else 0
-        n_any = int(sub["on_map_network"].sum())
+        n_any = int(sub["on_minhal_network"].sum())
         kinds = pd.Series([s["kind"] for s in r["segs"]])
         n_seg = len(r["segs"])
         n_routed = int((kinds == "routed").sum())
         share = n_on / n if n else 0
         if n_any == 0:
-            status = "missing in map"
+            status = "missing in Minhal"
         elif share >= 0.9 and (n_seg == 0 or n_routed / n_seg >= 0.9):
             status = "match"
         elif share >= 0.5:
@@ -403,48 +404,48 @@ def main() -> int:
         st_share = n_st / n if n else 0
         stations_status = "all" if st_share == 1 else "most" if st_share >= 0.75 else "some" if st_share >= 0.25 else "few"
         line_rows.append({
-            "LINE_ID": lid, "route_id": r["route_id"], "same_nodes_as": "", "name_mode_hint": hint, "map_mode": mode,
+            "LINE_ID": lid, "route_id": r["route_id"], "same_nodes_as": "", "name_mode_hint": hint, "minhal_mode": mode,
             "mode_hint_differs": bool(hint and mode and hint != mode), "status": status, "stations_status": stations_status, "n_nodes": n,
-            "nodes_with_station": n_st, "pct_nodes_with_station": round(100 * n_st / n) if n else None,
-            "nodes_on_map_line_of_mode": n_on, "pct_nodes_on_map_line": round(100 * share) if n else None,
-            "nodes_on_any_map_line": n_any, "nodes_off_network": n - n_on,
-            "station_dist_median_m": round(float(sub["dist_station_m"].median())) if n else None,
-            "station_dist_max_m": round(float(sub["dist_station_m"].max())) if n else None,
-            "line_dist_median_m": round(float(sub[f"dist_line_{mode}_m"].median())) if mode else None,
-            "line_dist_max_m": round(float(sub[f"dist_line_{mode}_m"].max())) if mode else None,
+            "nodes_with_minhal_station": n_st, "pct_nodes_with_minhal_station": round(100 * n_st / n) if n else None,
+            "nodes_on_minhal_line_of_mode": n_on, "pct_nodes_on_minhal_line": round(100 * share) if n else None,
+            "nodes_on_any_minhal_line": n_any, "nodes_off_network": n - n_on,
+            "minhal_station_dist_median_m": round(float(sub["dist_minhal_station_m"].median())) if n else None,
+            "minhal_station_dist_max_m": round(float(sub["dist_minhal_station_m"].max())) if n else None,
+            "minhal_line_dist_median_m": round(float(sub[f"dist_minhal_line_{mode}_m"].median())) if mode else None,
+            "minhal_line_dist_max_m": round(float(sub[f"dist_minhal_line_{mode}_m"].max())) if mode else None,
             "segments": n_seg, "segments_routed": n_routed,
             "segments_routing_differs": int((kinds == "routing differs").sum()),
             "segments_no_path": int((kinds == "no path").sum()),
             "segments_off_network": int((kinds == "off-network").sum()),
             "straight_length_m": int(sum(s["straight_m"] for s in r["segs"])),
             "routed_length_m": int(sum(s["geom"].length for s in r["segs"])),
-            "nodes_without_station": " | ".join(str(v) for v in sub.loc[~sub["station_match"], "node"]),
-            "nodes_off_map_line": " | ".join(str(v) for v in sub.loc[sub[f"dist_line_{mode}_m"] > args.tol_line, "node"]) if mode else " | ".join(str(v) for v in sub["node"]),
+            "nodes_without_minhal_station": " | ".join(str(v) for v in sub.loc[~sub["minhal_station_match"], "node"]),
+            "nodes_off_minhal_line": " | ".join(str(v) for v in sub.loc[sub[f"dist_minhal_line_{mode}_m"] > args.tol_line, "node"]) if mode else " | ".join(str(v) for v in sub["node"]),
             "mode_votes": ", ".join(f"{m} {v}" for m, v in sorted(votes.items(), key=lambda kv: -kv[1]) if v),
         })
     lines = pd.DataFrame(line_rows)
     same = lines.groupby("route_id")["LINE_ID"].agg(list)
     lines["same_nodes_as"] = [" | ".join(x for x in same[r] if x != l) for r, l in zip(lines["route_id"], lines["LINE_ID"])]
-    status_order = {"missing in map": 0, "mostly missing": 1, "partial": 2, "match": 3}
-    lines = lines.sort_values(["status", "pct_nodes_on_map_line", "LINE_ID"], key=lambda s: s.map(status_order) if s.name == "status" else s)
+    status_order = {"missing in Minhal": 0, "mostly missing": 1, "partial": 2, "match": 3}
+    lines = lines.sort_values(["status", "pct_nodes_on_minhal_line", "LINE_ID"], key=lambda s: s.map(status_order) if s.name == "status" else s)
     for key, r in routes.items():
         r["status"] = lines.loc[lines["route_id"] == r["route_id"], "status"].iloc[0]
         for t, s in enumerate(r["segs"]):
-            seg_rows.append({"route_id": r["route_id"], "lines": " | ".join(r["lines"]), "map_mode": r["mode"], "seq": t + 1,
+            seg_rows.append({"route_id": r["route_id"], "lines": " | ".join(r["lines"]), "minhal_mode": r["mode"], "seq": t + 1,
                              "from_node": s["from"], "to_node": s["to"], "kind": s["kind"], "straight_m": s["straight_m"],
-                             "map_route_m": s["routed_m"], "ratio": s["ratio"]})
+                             "minhal_route_m": s["routed_m"], "ratio": s["ratio"]})
     segments = pd.DataFrame(seg_rows)
 
-    # ---- 5. reverse: map -> external ------------------------------------------------------------
+    # ---- 5. reverse: Minhal -> Hubs project ------------------------------------------------------------
     atree = cKDTree(A)
     d_s2n, i_s2n = atree.query(S)
-    st["dist_node_m"] = d_s2n.round(0)
-    st["nearest_node"] = nodes.loc[i_s2n, "node"].values
-    st["nearest_node_lines"] = nodes.loc[i_s2n, "lines_str"].values
-    only_map_st = st.loc[st["dist_node_m"] > args.tol_station,
+    st["dist_hubs_node_m"] = d_s2n.round(0)
+    st["nearest_hubs_node"] = nodes.loc[i_s2n, "node"].values
+    st["nearest_hubs_node_lines"] = nodes.loc[i_s2n, "lines_str"].values
+    only_map_st = st.loc[st["dist_hubs_node_m"] > args.tol_station,
                          [c for c in ["id", "name", "modes", "n_modes", "planning_status", "yearOperation", "hub_id", "municipality",
-                                      "metropolin", "lng", "lat", "dist_node_m", "nearest_node", "nearest_node_lines"] if c in st.columns]]
-    only_map_st = only_map_st.sort_values(["planning_status", "dist_node_m"], ascending=[True, False])
+                                      "metropolin", "lng", "lat", "dist_hubs_node_m", "nearest_hubs_node", "nearest_hubs_node_lines"] if c in st.columns]]
+    only_map_st = only_map_st.sort_values(["planning_status", "dist_hubs_node_m"], ascending=[True, False])
 
     cov_rows, gap_geoms, used_geoms = [], [], []
     route_by_id = {r["route_id"]: r for r in routes.values()}
@@ -453,7 +454,7 @@ def main() -> int:
         n_edges = len(net.ew)
         cnt = np.array([len(used.get(k, ())) for k in range(n_edges)])
         used_len = float(net.ew[cnt > 0].sum())
-        cov_rows.append({"map mode": m, "map network km": round(net.ew.sum() / 1000, 1), "km used by an external line": round(used_len / 1000, 1),
+        cov_rows.append({"Minhal mode": m, "Minhal network km": round(net.ew.sum() / 1000, 1), "km used by a Hubs line": round(used_len / 1000, 1),
                          "pct used": round(100 * used_len / net.ew.sum()) if net.ew.sum() else None})
         used_union = None
         if (cnt > 0).any():
@@ -474,8 +475,8 @@ def main() -> int:
                     parallel = float(np.mean(shapely.distance(pts, used_union) <= args.parallel_tol)) >= 0.8
                 c = g.interpolate(0.5, normalized=True)
                 d, k = atree.query([c.x, c.y])
-                gap_geoms.append({"mode": m, "length_m": round(g.length), "parallel_to_used": parallel, "nearest_node": nodes.at[k, "node"],
-                                  "nearest_node_lines": nodes.at[k, "lines_str"], "dist_nearest_node_m": round(float(d)), "geometry": g})
+                gap_geoms.append({"mode": m, "length_m": round(g.length), "parallel_to_used": parallel, "nearest_hubs_node": nodes.at[k, "node"],
+                                  "nearest_hubs_node_lines": nodes.at[k, "lines_str"], "dist_nearest_node_m": round(float(d)), "geometry": g})
                 par_len += g.length if parallel else 0
         cov_rows[-1]["km parallel to a used line"] = round(par_len / 1000, 1)
     gaps_all = gpd.GeoDataFrame(gap_geoms, geometry="geometry", crs=ITM) if gap_geoms else \
@@ -488,65 +489,65 @@ def main() -> int:
     # ---- summary --------------------------------------------------------------------------------
     n_lines, n_nodes = len(lines), len(nodes)
     summary = pd.DataFrame([
-        {"item": "external lines", "value": n_lines, "note": f"{len(routes)} distinct node sets (both directions of a line share one)"},
-        {"item": "external nodes", "value": n_nodes, "note": Path(args.csv).name},
-        {"item": "map stations / line segments", "value": f"{len(st)} / {len(ln)}", "note": "tod_israel.xlsx 'stations', tod_israel.gpkg 'lines'"},
-        {"item": "offset external -> map, global median (m)", "value": f"dx {glob[0]:+.1f}, dy {glob[1]:+.1f}",
-         "note": f"shift mode '{args.shift}'; the sheet 'shift' lists it per metropolitan area; applied to the nodes before matching"},
-        {"item": "nodes with a map station", "value": int(nodes["station_match"].sum()), "note": f"within {args.tol_station:.0f} m after shift ({int((d_raw <= args.tol_station).sum())} before shift)"},
-        {"item": "nodes with a possible station", "value": int(nodes["station_possible"].sum()), "note": f"{args.tol_station:.0f}-{args.near:.0f} m, review"},
-        {"item": "nodes without a map station", "value": int((nodes["dist_station_m"] > args.near).sum()), "note": f"nearest station more than {args.near:.0f} m away"},
-        {"item": "nodes on the map network", "value": int(nodes["on_map_network"].sum()), "note": f"a map line of any mode within {args.tol_line:.0f} m (Rail {args.tol_line_rail:.0f} m)"},
-        {"item": "lines: match", "value": int((lines["status"] == "match").sum()), "note": ">= 90% of nodes on a map line of the mode and >= 90% of stop pairs routed along it"},
-        {"item": "lines: partial", "value": int((lines["status"] == "partial").sum()), "note": ">= 50% of nodes on a map line of the mode"},
-        {"item": "lines: mostly missing", "value": int((lines["status"] == "mostly missing").sum()), "note": "< 50% of nodes on a map line of the mode"},
-        {"item": "lines: missing in map", "value": int((lines["status"] == "missing in map").sum()), "note": "no node on any map line"},
-        {"item": "lines: stations all / most / some / few", "value": " / ".join(str(int((lines["stations_status"] == s).sum())) for s in ("all", "most", "some", "few")),
-         "note": "share of the line's nodes with a map station: 100% / >= 75% / >= 25% / < 25%"},
-        {"item": "lines whose name hints another mode", "value": int(lines["mode_hint_differs"].sum()), "note": "name prefix vs the mode of the map lines under the nodes"},
+        {"item": "Hubs project lines", "value": n_lines, "note": f"{len(routes)} distinct node sets (both directions of a line share one)"},
+        {"item": "Hubs project nodes", "value": n_nodes, "note": Path(args.csv).name},
+        {"item": "Minhal stations / line segments", "value": f"{len(st)} / {len(ln)}", "note": "tod_israel.xlsx 'stations', tod_israel.gpkg 'lines'"},
+        {"item": "offset Hubs -> Minhal, global median (m)", "value": f"dx {glob[0]:+.1f}, dy {glob[1]:+.1f}",
+         "note": f"shift mode '{args.shift}'; the sheet 'shift' lists it per metropolitan area; applied to the Hubs nodes before matching"},
+        {"item": "Hubs nodes with a Minhal station", "value": int(nodes["minhal_station_match"].sum()), "note": f"within {args.tol_station:.0f} m after shift ({int((d_raw <= args.tol_station).sum())} before shift)"},
+        {"item": "Hubs nodes with a possible Minhal station", "value": int(nodes["minhal_station_possible"].sum()), "note": f"{args.tol_station:.0f}-{args.near:.0f} m, review"},
+        {"item": "Hubs nodes without a Minhal station", "value": int((nodes["dist_minhal_station_m"] > args.near).sum()), "note": f"nearest Minhal station more than {args.near:.0f} m away"},
+        {"item": "Hubs nodes on the Minhal network", "value": int(nodes["on_minhal_network"].sum()), "note": f"a Minhal line of any mode within {args.tol_line:.0f} m (Rail {args.tol_line_rail:.0f} m)"},
+        {"item": "Hubs lines: match", "value": int((lines["status"] == "match").sum()), "note": ">= 90% of nodes on a Minhal line of the mode and >= 90% of stop pairs routed along it"},
+        {"item": "Hubs lines: partial", "value": int((lines["status"] == "partial").sum()), "note": ">= 50% of nodes on a Minhal line of the mode"},
+        {"item": "Hubs lines: mostly missing", "value": int((lines["status"] == "mostly missing").sum()), "note": "< 50% of nodes on a Minhal line of the mode"},
+        {"item": "Hubs lines: missing in Minhal", "value": int((lines["status"] == "missing in Minhal").sum()), "note": "no node on any Minhal line"},
+        {"item": "Hubs lines: Minhal stations all / most / some / few", "value": " / ".join(str(int((lines["stations_status"] == s).sum())) for s in ("all", "most", "some", "few")),
+         "note": "share of the line's nodes with a Minhal station: 100% / >= 75% / >= 25% / < 25%"},
+        {"item": "Hubs lines whose name hints another mode", "value": int(lines["mode_hint_differs"].sum()), "note": "name prefix vs the mode of the Minhal lines under the nodes"},
         {"item": "stop pairs: routing differs / no path / off-network", "value": f"{int((segments['kind'] == 'routing differs').sum())} / {int((segments['kind'] == 'no path').sum())} / {int((segments['kind'] == 'off-network').sum())}" if len(segments) else "0 / 0 / 0",
-         "note": f"map route > {args.detour:g} x straight (+{args.detour_min:.0f} m) / not connected / a stop off the map network"},
-        {"item": "map stations without an external node", "value": len(only_map_st), "note": f"no node within {args.tol_station:.0f} m"},
-        {"item": "map network stretches no external line uses", "value": f"{len(gaps)} ({gaps['length_m'].sum() / 1000:.0f} km)" if len(gaps) else "0",
-         "note": f">= {args.min_gap:.0f} m long; {int(gaps_all['parallel_to_used'].sum())} more stretches ({gaps_all.loc[gaps_all['parallel_to_used'], 'length_m'].sum() / 1000:.0f} km) run parallel (<= {args.parallel_tol:.0f} m) to a used line and are left out"},
+         "note": f"Minhal route > {args.detour:g} x straight (+{args.detour_min:.0f} m) / not connected / a stop off the Minhal network"},
+        {"item": "Minhal stations without a Hubs node", "value": len(only_map_st), "note": f"no Hubs node within {args.tol_station:.0f} m"},
+        {"item": "Minhal network stretches no Hubs line uses", "value": f"{len(gaps)} ({gaps['length_m'].sum() / 1000:.0f} km)" if len(gaps) else "0",
+         "note": f">= {args.min_gap:.0f} m long, of the Minhal network of the line's mode; {int(gaps_all['parallel_to_used'].sum())} more stretches ({gaps_all.loc[gaps_all['parallel_to_used'], 'length_m'].sum() / 1000:.0f} km) run parallel (<= {args.parallel_tol:.0f} m) to a used line and are left out"},
     ])
 
     # ---- write xlsx + gpkg -----------------------------------------------------------------------
-    node_cols = ["node", "n_lines", "lines_str", "X", "Y", "shift_dx", "shift_dy", "x_adj", "y_adj", "station_match", "station_possible",
-                 "dist_station_m", "dist_station_raw_m", "station_id", "station_name", "station_modes", "station_status", "station_metropolin",
-                 "on_map_network", "map_modes_near", "dist_line_m"] + [f"dist_line_{m}_m" for m in unions]
-    nodes_out = nodes[node_cols].rename(columns={"lines_str": "lines"}).sort_values(["station_match", "dist_station_m"], ascending=[True, False])
+    node_cols = ["node", "n_lines", "lines_str", "X", "Y", "shift_dx", "shift_dy", "x_adj", "y_adj", "minhal_station_match", "minhal_station_possible",
+                 "dist_minhal_station_m", "dist_minhal_station_raw_m", "minhal_station_id", "minhal_station_name", "minhal_station_modes", "minhal_station_status", "minhal_station_metropolin",
+                 "on_minhal_network", "minhal_modes_near", "dist_minhal_line_m"] + [f"dist_minhal_line_{m}_m" for m in unions]
+    nodes_out = nodes[node_cols].rename(columns={"lines_str": "lines"}).sort_values(["minhal_station_match", "dist_minhal_station_m"], ascending=[True, False])
     out_x = out_dir / "line_comparison.xlsx"
     with pd.ExcelWriter(out_x, engine="openpyxl") as xw:
         summary.to_excel(xw, sheet_name="summary", index=False)
         shift_tbl.to_excel(xw, sheet_name="shift", index=False)
-        lines.to_excel(xw, sheet_name="lines", index=False)
-        segments.to_excel(xw, sheet_name="stop_pairs", index=False)
-        nodes_out.to_excel(xw, sheet_name="nodes", index=False)
-        only_map_st.to_excel(xw, sheet_name="only_map_stations", index=False)
-        gaps.drop(columns="geometry").to_excel(xw, sheet_name="only_map_lines", index=False)
-        coverage.to_excel(xw, sheet_name="map_coverage", index=False)
+        lines.to_excel(xw, sheet_name="hubs_lines", index=False)
+        segments.to_excel(xw, sheet_name="hubs_stop_pairs", index=False)
+        nodes_out.to_excel(xw, sheet_name="hubs_nodes", index=False)
+        only_map_st.to_excel(xw, sheet_name="only_minhal_stations", index=False)
+        gaps.drop(columns="geometry").to_excel(xw, sheet_name="only_minhal_lines", index=False)
+        coverage.to_excel(xw, sheet_name="minhal_coverage", index=False)
     print(f"wrote {out_x}")
     print(summary.to_string(index=False))
 
     out_g = out_dir / "line_comparison.gpkg"
     if out_g.exists():
         out_g.unlink()
-    g_routes = gpd.GeoDataFrame([{"route_id": r["route_id"], "lines": " | ".join(r["lines"]), "map_mode": r["mode"], "status": r["status"],
+    g_routes = gpd.GeoDataFrame([{"route_id": r["route_id"], "lines": " | ".join(r["lines"]), "minhal_mode": r["mode"], "status": r["status"],
                                   "n_nodes": len(r["order"]),
                                   "geometry": MultiLineString([s["geom"] for s in r["segs"]]) if r["segs"] else Point(A[r["order"][0]])}
                                  for r in routes.values()], geometry="geometry", crs=ITM)
-    g_routes[g_routes.geom_type == "MultiLineString"].to_file(out_g, layer="external_routes", driver="GPKG")
+    g_routes[g_routes.geom_type == "MultiLineString"].to_file(out_g, layer="hubs_routes", driver="GPKG")
     g_segs = gpd.GeoDataFrame(segments.assign(geometry=[s["geom"] for r in routes.values() for s in r["segs"]]), geometry="geometry", crs=ITM)
     if len(g_segs):
-        g_segs.to_file(out_g, layer="external_stop_pairs", driver="GPKG")
-    gpd.GeoDataFrame(nodes_out, geometry=gpd.points_from_xy(nodes_out["x_adj"], nodes_out["y_adj"]), crs=ITM).to_file(out_g, layer="external_nodes", driver="GPKG")
-    gpd.GeoDataFrame(nodes_out, geometry=gpd.points_from_xy(nodes_out["X"], nodes_out["Y"]), crs=ITM).to_file(out_g, layer="external_nodes_raw", driver="GPKG")
+        g_segs.to_file(out_g, layer="hubs_stop_pairs", driver="GPKG")
+    gpd.GeoDataFrame(nodes_out, geometry=gpd.points_from_xy(nodes_out["x_adj"], nodes_out["y_adj"]), crs=ITM).to_file(out_g, layer="hubs_nodes", driver="GPKG")
+    gpd.GeoDataFrame(nodes_out, geometry=gpd.points_from_xy(nodes_out["X"], nodes_out["Y"]), crs=ITM).to_file(out_g, layer="hubs_nodes_raw", driver="GPKG")
     if used_geoms:
-        gpd.GeoDataFrame(used_geoms, geometry="geometry", crs=ITM).to_file(out_g, layer="map_lines_used", driver="GPKG")
+        gpd.GeoDataFrame(used_geoms, geometry="geometry", crs=ITM).to_file(out_g, layer="minhal_lines_used", driver="GPKG")
     if len(gaps_all):
-        gaps_all.to_file(out_g, layer="only_map_lines", driver="GPKG")       # parallel duplicates kept, flagged
-    gpd.GeoDataFrame(only_map_st, geometry=gpd.points_from_xy(only_map_st["lng"], only_map_st["lat"]), crs=4326).to_file(out_g, layer="only_map_stations", driver="GPKG")
+        gaps_all.to_file(out_g, layer="only_minhal_lines", driver="GPKG")       # parallel duplicates kept, flagged
+    gpd.GeoDataFrame(only_map_st, geometry=gpd.points_from_xy(only_map_st["lng"], only_map_st["lat"]), crs=4326).to_file(out_g, layer="only_minhal_stations", driver="GPKG")
     print(f"wrote {out_g}")
 
     # ---- map ----------------------------------------------------------------------------------------
@@ -557,7 +558,7 @@ def main() -> int:
         lr = lines[lines["route_id"] == r["route_id"]].iloc[0]
         segs4 = to_wgs([s["geom"].simplify(3) for s in r["segs"]])
         j_routes.append({"id": r["route_id"], "lines": r["lines"], "mode": r["mode"] or "?", "hint": mode_hint(r["lines"][0]), "status": r["status"], "sst": lr["stations_status"],
-                         "n": int(lr["n_nodes"]), "nst": int(lr["nodes_with_station"]), "non": int(lr["nodes_on_map_line_of_mode"]),
+                         "n": int(lr["n_nodes"]), "nst": int(lr["nodes_with_minhal_station"]), "non": int(lr["nodes_on_minhal_line_of_mode"]),
                          "nseg": int(lr["segments"]), "nrt": int(lr["segments_routed"]), "ndiff": int(lr["segments_routing_differs"] + lr["segments_no_path"]),
                          "noff": int(lr["segments_off_network"]), "votes": lr["mode_votes"],
                          "segs": [{"k": {"routed": "r", "routing differs": "d", "no path": "n", "off-network": "o"}[s["kind"]], "c": rc(g),
@@ -566,17 +567,17 @@ def main() -> int:
     j_nodes = []
     for k, r in nodes.iterrows():
         o = {"id": int(r["node"]) if str(r["node"]).isdigit() else str(r["node"]), "lat": round(A4[k, 1], 5), "lng": round(A4[k, 0], 5),
-             "lines": r["lines"], "d": int(r["dist_station_m"]), "dl": int(r["dist_line_m"]), "near": r["map_modes_near"],
-             "sname": str(r["station_name"]), "smodes": str(r["station_modes"]), "sstat": str(r["station_status"]),
-             "m": int(r["station_match"]) + (2 if r["station_possible"] else 0), "on": bool(r["on_map_network"])}
-        if r["station_match"] or r["station_possible"]:
+             "lines": r["lines"], "d": int(r["dist_minhal_station_m"]), "dl": int(r["dist_minhal_line_m"]), "near": r["minhal_modes_near"],
+             "sname": str(r["minhal_station_name"]), "smodes": str(r["minhal_station_modes"]), "sstat": str(r["minhal_station_status"]),
+             "m": int(r["minhal_station_match"]) + (2 if r["minhal_station_possible"] else 0), "on": bool(r["on_minhal_network"])}
+        if r["minhal_station_match"] or r["minhal_station_possible"]:
             o["slat"], o["slng"] = round(S4[i_adj[k], 1], 5), round(S4[i_adj[k], 0], 5)
         j_nodes.append(o)
     j_used = [{"mode": u["mode"], "c": rc(g)} for u, g in zip(used_geoms, to_wgs([u["geometry"].simplify(5) for u in used_geoms]))] if used_geoms else []
-    j_gaps = [{"id": int(r["gap_id"]), "mode": r["mode"], "len": int(r["length_m"]), "near": str(r["nearest_node_lines"]), "nd": int(r["dist_nearest_node_m"]), "c": rc(g)}
+    j_gaps = [{"id": int(r["gap_id"]), "mode": r["mode"], "len": int(r["length_m"]), "near": str(r["nearest_hubs_node_lines"]), "nd": int(r["dist_nearest_node_m"]), "c": rc(g)}
               for (_, r), g in zip(gaps.iterrows(), to_wgs(gaps.geometry.simplify(5)))] if len(gaps) else []
     j_oms = [{"id": int(r["id"]), "name": str(r["name"]), "modes": str(r["modes"]), "stat": str(r["planning_status"]), "lat": round(float(r["lat"]), 5),
-              "lng": round(float(r["lng"]), 5), "d": int(r["dist_node_m"]), "near": str(r["nearest_node_lines"])} for _, r in only_map_st.iterrows()]
+              "lng": round(float(r["lng"]), 5), "d": int(r["dist_hubs_node_m"]), "near": str(r["nearest_hubs_node_lines"])} for _, r in only_map_st.iterrows()]
     j_shift = shift_tbl.to_dict("records")
 
     def clean(o):
@@ -609,8 +610,8 @@ def main() -> int:
     return 0
 
 
-TEMPLATE = r"""<title>Transit Line Comparison</title>
-<meta name="description" content="Transit lines of פרויקט תעדוף מתחמים (model nodes per line) routed over the מנהל התכנון TOD map network: matched stops, missing stops, routing differences and map lines the model does not use.">
+TEMPLATE = r"""<title>Hubs vs Minhal Lines</title>
+<meta name="description" content="Transit lines of the Hubs project (פרויקט תעדוף מתחמים, model nodes per line) routed over the Minhal network (מנהל התכנון TOD map): matched stops, missing stops, routing differences and Minhal lines the Hubs project does not use.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
 <style>
 __LEAFLET_CSS__
@@ -690,51 +691,51 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
 @media (prefers-reduced-motion: reduce) { .leaflet-zoom-anim .leaflet-zoom-animated, .leaflet-fade-anim .leaflet-popup { transition: none; } }
 </style>
 
-<div id="map" role="application" aria-label="Map comparing the transit lines of פרויקט תעדוף מתחמים with the מנהל התכנון map"></div>
+<div id="map" role="application" aria-label="Map comparing the transit lines of the Hubs project with the Minhal network"></div>
 
 <section class="panel" id="panel" aria-label="Layers and legend">
-  <h1>Transit line comparison</h1>
-  <p class="sub">__N_LINES__ <bdi>פרויקט תעדוף מתחמים</bdi> lines (__N_ROUTES__ distinct node sets, __N_NODES__ nodes) routed over the <bdi>מנהל התכנון</bdi> map network · stations matched within __TOLS__ m, lines within __TOLL__ m (Rail __TOLR__ m) · nodes shifted by a local median offset (overall __GDX__ m, __GDY__ m)</p>
-  <p class="eyebrow">External lines (routed over the map)</p>
+  <h1>Hubs project vs Minhal: transit lines</h1>
+  <p class="sub">__N_LINES__ Hubs project lines (<bdi>פרויקט תעדוף מתחמים</bdi>; __N_ROUTES__ distinct node sets, __N_NODES__ nodes) routed over the Minhal network (<bdi>מנהל התכנון</bdi>) · stations matched within __TOLS__ m, lines within __TOLL__ m (Rail __TOLR__ m) · nodes shifted by a local median offset (overall __GDX__ m, __GDY__ m)</p>
+  <p class="eyebrow">Hubs project lines (routed over Minhal)</p>
   <ul class="sets">
     <li><label><input type="checkbox" id="set-routed" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><path d="M1 12 C 6 2, 12 14, 21 4" fill="none" stroke="var(--routed)" stroke-width="3"/></svg>
-      <span class="lbl">Stop pair routed on the map<small>follows a map line of the same mode</small></span><span class="cnt" id="cnt-routed"></span></label></li>
+      <span class="lbl">Stop pair routed on Minhal<small>follows a Minhal line of the same mode</small></span><span class="cnt" id="cnt-routed"></span></label></li>
     <li><label><input type="checkbox" id="set-diff" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="1" y1="8" x2="21" y2="8" stroke="var(--diff)" stroke-width="3" stroke-dasharray="4 3"/></svg>
-      <span class="lbl">Routing differs<small>map route much longer than the straight line, or no path</small></span><span class="cnt" id="cnt-diff"></span></label></li>
+      <span class="lbl">Routing differs<small>Minhal route much longer than the straight line, or no path</small></span><span class="cnt" id="cnt-diff"></span></label></li>
     <li><label><input type="checkbox" id="set-off" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="1" y1="8" x2="21" y2="8" stroke="var(--off)" stroke-width="3" stroke-dasharray="4 3"/></svg>
-      <span class="lbl">Off the map network<small>a stop with no map line of the mode within __TOLL__ m (Rail __TOLR__ m)</small></span><span class="cnt" id="cnt-off"></span></label></li>
+      <span class="lbl">Off the Minhal network<small>a Hubs stop with no Minhal line of the mode within __TOLL__ m (Rail __TOLR__ m)</small></span><span class="cnt" id="cnt-off"></span></label></li>
   </ul>
-  <p class="eyebrow">External nodes</p>
+  <p class="eyebrow">Hubs project nodes</p>
   <ul class="sets">
     <li><label><input type="checkbox" id="set-nok" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="6" y1="8" x2="16" y2="8" stroke="var(--tie)" stroke-width="1.5"/><circle cx="6" cy="8" r="5" fill="var(--node-ok)" stroke="var(--ring)" stroke-width="1.5"/><circle cx="16" cy="8" r="5" fill="none" stroke="var(--node-ok)" stroke-width="2"/></svg>
-      <span class="lbl">Node with a map station<small>filled = node · ring = station · line = offset</small></span><span class="cnt" id="cnt-nok"></span></label></li>
+      <span class="lbl">Node with a Minhal station<small>filled = Hubs node · ring = Minhal station · line = offset</small></span><span class="cnt" id="cnt-nok"></span></label></li>
     <li><label><input type="checkbox" id="set-nmaybe" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="5" fill="var(--node-maybe)" stroke="var(--ring)" stroke-width="1.5"/></svg>
-      <span class="lbl">Possible station<small>nearest station __TOLS__-__NEAR__ m away</small></span><span class="cnt" id="cnt-nmaybe"></span></label></li>
+      <span class="lbl">Possible Minhal station<small>nearest Minhal station __TOLS__-__NEAR__ m away</small></span><span class="cnt" id="cnt-nmaybe"></span></label></li>
     <li><label><input type="checkbox" id="set-nno" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="5" fill="var(--node-no)" stroke="var(--ring)" stroke-width="1.5"/></svg>
-      <span class="lbl">No map station<small>none within __NEAR__ m</small></span><span class="cnt" id="cnt-nno"></span></label></li>
+      <span class="lbl">No Minhal station<small>none within __NEAR__ m</small></span><span class="cnt" id="cnt-nno"></span></label></li>
   </ul>
-  <p class="eyebrow">Map network</p>
+  <p class="eyebrow">Minhal network</p>
   <ul class="sets">
     <li><label><input type="checkbox" id="set-used" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="1" y1="8" x2="21" y2="8" stroke="var(--used)" stroke-width="2"/></svg>
-      <span class="lbl">Map lines used by an external line</span><span class="cnt" id="cnt-used"></span></label></li>
+      <span class="lbl">Minhal lines used by a Hubs line</span><span class="cnt" id="cnt-used"></span></label></li>
     <li><label><input type="checkbox" id="set-gap" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="1" y1="8" x2="21" y2="8" stroke="var(--gap)" stroke-width="3.5"/></svg>
-      <span class="lbl">Map lines no external line uses<small>stretches of __MINGAP__ m or more</small></span><span class="cnt" id="cnt-gap"></span></label></li>
+      <span class="lbl">Minhal lines no Hubs line uses<small>stretches of __MINGAP__ m or more</small></span><span class="cnt" id="cnt-gap"></span></label></li>
     <li><label><input type="checkbox" id="set-oms" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="5" fill="var(--onlym)" stroke="var(--ring)" stroke-width="1.5"/></svg>
-      <span class="lbl">Map stations without a node<small>no external node within __TOLS__ m</small></span><span class="cnt" id="cnt-oms"></span></label></li>
+      <span class="lbl">Minhal stations without a Hubs node<small>no Hubs node within __TOLS__ m</small></span><span class="cnt" id="cnt-oms"></span></label></li>
   </ul>
-  <p class="eyebrow">Find a line</p>
+  <p class="eyebrow">Find a Hubs line</p>
   <div class="pick">
-    <select id="pick-line" aria-label="External line"><option value="">all lines</option></select>
-    <select id="pick-status" aria-label="Line status"><option value="">any status</option><option value="match">match</option><option value="partial">partial</option><option value="mostly missing">mostly missing</option><option value="missing in map">missing in map</option></select>
+    <select id="pick-line" aria-label="Hubs line"><option value="">all lines</option></select>
+    <select id="pick-status" aria-label="Line status"><option value="">any status</option><option value="match">match</option><option value="partial">partial</option><option value="mostly missing">mostly missing</option><option value="missing in Minhal">missing in Minhal</option></select>
   </div>
   <div class="actions">
     <button type="button" id="btn-fit">Zoom to all</button>
@@ -743,7 +744,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
     <button type="button" id="btn-jlm">Jerusalem</button>
     <button type="button" id="btn-bsh">Be'er Sheva</button>
   </div>
-  <p class="note">Basemap: OpenStreetMap (light gray). Matching is by geometry only; line names are not compared. The order of the stops of each external line is reconstructed (shortest path through its nodes), so a routing difference on a line with loops or branches may come from the ordering. Source: __CSV_NAME__.</p>
+  <p class="note">Basemap: OpenStreetMap (light gray). Matching is by geometry only; line names are not compared. The order of the stops of each Hubs line is reconstructed (shortest path through its nodes), so a routing difference on a line with loops or branches may come from the ordering. Source: __CSV_NAME__.</p>
 </section>
 
 <script src="__LEAFLET_JS__"></script>
@@ -762,35 +763,35 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   const groups = {};
   ['used','gap','oms','routed','diff','off','nok','nmaybe','nno'].forEach(k => groups[k] = L.layerGroup().addTo(map));
   const stCls = s => s === 'match' ? 'st-match' : s === 'partial' ? 'st-partial' : 'st-missing';
-  const kindName = {r: 'routed on the map', d: 'routing differs', n: 'no path on the map network', o: 'off the map network'};
+  const kindName = {r: 'routed on Minhal', d: 'routing differs', n: 'no path on the Minhal network', o: 'off the Minhal network'};
 
-  // ---- map network ---------------------------------------------------------------------------
+  // ---- Minhal network ---------------------------------------------------------------------------
   USED.forEach(u => groups.used.addLayer(L.polyline(u.c, {color: tok('--used'), weight: 2, opacity: .7, interactive: false})));
   GAPS.forEach(g => {
     const pl = L.polyline(g.c, {color: tok('--gap'), weight: 4, opacity: .85});
-    pl.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--gap)">Map line no external line uses</span>
-      <dl class="kv"><dt>mode</dt><dd>${esc(g.mode)}</dd><dt>length</dt><dd>${fmt(g.len)} m</dd><dt>nearest external node</dt><dd>${fmt(g.nd)} m · lines ${esc(g.near)}</dd></dl></div>`, {maxWidth: 320});
-    pl.bindTooltip(`${g.mode} · ${fmt(g.len)} m not used by any external line`, {sticky: true});
+    pl.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--gap)">Minhal line no Hubs line uses</span>
+      <dl class="kv"><dt>mode</dt><dd>${esc(g.mode)}</dd><dt>length</dt><dd>${fmt(g.len)} m</dd><dt>nearest Hubs node</dt><dd>${fmt(g.nd)} m · lines ${esc(g.near)}</dd></dl></div>`, {maxWidth: 320});
+    pl.bindTooltip(`${g.mode} · ${fmt(g.len)} m not used by any Hubs line`, {sticky: true});
     groups.gap.addLayer(pl);
   });
   OMS.forEach(p => {
     const m = L.circleMarker([p.lat, p.lng], {radius: 6, color: tok('--ring'), weight: 1.5, fillColor: tok('--onlym'), fillOpacity: .95});
-    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--onlym)">Map station without a node</span>
+    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--onlym)">Minhal station without a Hubs node</span>
       <h2>${esc(p.name)}</h2><dl class="kv"><dt>station id</dt><dd>${p.id}</dd><dt>modes</dt><dd>${esc(p.modes)}</dd><dt>status</dt><dd>${esc(p.stat)}</dd>
-      <dt>nearest node</dt><dd>${fmt(p.d)} m · lines ${esc(p.near)}</dd></dl></div>`, {maxWidth: 320});
-    m.bindTooltip(`${p.name} (map only)`, {direction: 'top', offset: [0, -6]});
+      <dt>nearest Hubs node</dt><dd>${fmt(p.d)} m · lines ${esc(p.near)}</dd></dl></div>`, {maxWidth: 320});
+    m.bindTooltip(`${p.name} (Minhal only)`, {direction: 'top', offset: [0, -6]});
     groups.oms.addLayer(m);
   });
 
-  // ---- external lines ------------------------------------------------------------------------
+  // ---- Hubs project lines ------------------------------------------------------------------------
   const routeLayers = {};                      // route id -> [polyline]
   const counts = {r: 0, d: 0, o: 0};
   const routePopup = (r, s) => `<div class="pp" dir="auto"><span class="st ${stCls(r.status)}">alignment: ${esc(r.status)}</span> <span class="st ${r.sst === 'all' || r.sst === 'most' ? 'st-match' : r.sst === 'some' ? 'st-partial' : 'st-missing'}">stations: ${esc(r.sst)}</span>
       <h2 style="margin-top:6px">${esc(r.lines.join(' / '))}</h2>
-      <dl class="kv"><dt>map mode</dt><dd>${esc(r.mode)}${r.hint && r.hint !== r.mode ? ` <span class="diff">(name hints ${esc(r.hint)})</span>` : ''} · votes ${esc(r.votes)}</dd>
-      <dt>nodes</dt><dd>${r.n} · <span class="${r.nst < r.n ? 'diff' : 'same'}">${r.nst} with a station</span> · ${r.non} on a map ${esc(r.mode)} line</dd>
+      <dl class="kv"><dt>Minhal mode</dt><dd>${esc(r.mode)}${r.hint && r.hint !== r.mode ? ` <span class="diff">(name hints ${esc(r.hint)})</span>` : ''} · votes ${esc(r.votes)}</dd>
+      <dt>nodes</dt><dd>${r.n} · <span class="${r.nst < r.n ? 'diff' : 'same'}">${r.nst} with a Minhal station</span> · ${r.non} on a Minhal ${esc(r.mode)} line</dd>
       <dt>stop pairs</dt><dd>${r.nseg} · ${r.nrt} routed · <span class="${r.ndiff ? 'diff' : ''}">${r.ndiff} routing differ</span> · <span class="${r.noff ? 'bad' : ''}">${r.noff} off network</span></dd>
-      ${s ? `<dt>this pair</dt><dd>${esc(kindName[s.k])} · nodes ${esc(s.a)} → ${esc(s.b)} · straight ${fmt(s.s)} m${s.m != null ? ` · map route ${fmt(s.m)} m` : ''}</dd>` : ''}</dl>
+      ${s ? `<dt>this pair</dt><dd>${esc(kindName[s.k])} · nodes ${esc(s.a)} → ${esc(s.b)} · straight ${fmt(s.s)} m${s.m != null ? ` · Minhal route ${fmt(s.m)} m` : ''}</dd>` : ''}</dl>
       <button type="button" data-zoom="${r.id}">Zoom to line</button></div>`;
   ROUTES.forEach(r => {
     routeLayers[r.id] = [];
@@ -819,10 +820,10 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
     const m = L.circleMarker([p.lat, p.lng], {radius: 5.5, color: tok('--ring'), weight: 1.2, fillColor: col, fillOpacity: .95});
     const stTxt = set === 'nno' ? `<span class="bad">none within __NEAR__ m</span> (nearest ${esc(p.sname)} · ${fmt(p.d)} m)`
       : `${esc(p.sname)} · ${esc(p.smodes)} · ${esc(p.sstat)} · <span class="${set === 'nok' ? 'same' : 'diff'}">${fmt(p.d)} m</span>`;
-    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:${col}">${set === 'nok' ? 'Node with a map station' : set === 'nmaybe' ? 'Possible station' : 'No map station'}</span>
-      <h2>node ${esc(p.id)}</h2><dl class="kv"><dt>lines</dt><dd>${esc(p.lines.join(' | '))}</dd><dt>map station</dt><dd>${stTxt}</dd>
-      <dt>map line</dt><dd>${p.on ? `<span class="same">${esc(p.near)} within ${fmt(p.dl)} m</span>` : `<span class="bad">none within __TOLL__ m (Rail __TOLR__ m)</span> (nearest ${fmt(p.dl)} m)`}</dd></dl></div>`, {maxWidth: 340});
-    m.bindTooltip(`node ${p.id} · ${p.lines.join(' | ')}`, {direction: 'top', offset: [0, -6]});
+    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:${col}">${set === 'nok' ? 'Node with a Minhal station' : set === 'nmaybe' ? 'Possible Minhal station' : 'No Minhal station'}</span>
+      <h2>Hubs node ${esc(p.id)}</h2><dl class="kv"><dt>Hubs lines</dt><dd>${esc(p.lines.join(' | '))}</dd><dt>Minhal station</dt><dd>${stTxt}</dd>
+      <dt>Minhal line</dt><dd>${p.on ? `<span class="same">${esc(p.near)} within ${fmt(p.dl)} m</span>` : `<span class="bad">none within __TOLL__ m (Rail __TOLR__ m)</span> (nearest ${fmt(p.dl)} m)`}</dd></dl></div>`, {maxWidth: 340});
+    m.bindTooltip(`Hubs node ${p.id} · ${p.lines.join(' | ')}`, {direction: 'top', offset: [0, -6]});
     m._lines = p.lines;
     if (p.slat != null) {
       groups[set].addLayer(L.polyline([[p.lat, p.lng], [p.slat, p.slng]], {color: tok('--tie'), weight: 1.2, opacity: .8, interactive: false}));

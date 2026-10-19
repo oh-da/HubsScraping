@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Transit Line Comparison</title>
-<meta name="description" content="Transit lines of פרויקט תעדוף מתחמים (model nodes per line) routed over the מנהל התכנון TOD map network: matched stops, missing stops, routing differences and map lines the model does not use.">
+<title>Hubs vs Minhal Lines</title>
+<meta name="description" content="Transit lines of the Hubs project (פרויקט תעדוף מתחמים, model nodes per line) routed over the Minhal network (מנהל התכנון TOD map): matched stops, missing stops, routing differences and Minhal lines the Hubs project does not use.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
 <style>
 /* required styles */
@@ -747,51 +747,51 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
 
 </head>
 <body>
-<div id="map" role="application" aria-label="Map comparing the transit lines of פרויקט תעדוף מתחמים with the מנהל התכנון map"></div>
+<div id="map" role="application" aria-label="Map comparing the transit lines of the Hubs project with the Minhal network"></div>
 
 <section class="panel" id="panel" aria-label="Layers and legend">
-  <h1>Transit line comparison</h1>
-  <p class="sub">218 <bdi>פרויקט תעדוף מתחמים</bdi> lines (166 distinct node sets, 1536 nodes) routed over the <bdi>מנהל התכנון</bdi> map network · stations matched within 150 m, lines within 100 m (Rail 250 m) · nodes shifted by a local median offset (overall -53 m, -29 m)</p>
-  <p class="eyebrow">External lines (routed over the map)</p>
+  <h1>Hubs project vs Minhal: transit lines</h1>
+  <p class="sub">218 Hubs project lines (<bdi>פרויקט תעדוף מתחמים</bdi>; 166 distinct node sets, 1536 nodes) routed over the Minhal network (<bdi>מנהל התכנון</bdi>) · stations matched within 150 m, lines within 100 m (Rail 250 m) · nodes shifted by a local median offset (overall -53 m, -29 m)</p>
+  <p class="eyebrow">Hubs project lines (routed over Minhal)</p>
   <ul class="sets">
     <li><label><input type="checkbox" id="set-routed" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><path d="M1 12 C 6 2, 12 14, 21 4" fill="none" stroke="var(--routed)" stroke-width="3"/></svg>
-      <span class="lbl">Stop pair routed on the map<small>follows a map line of the same mode</small></span><span class="cnt" id="cnt-routed"></span></label></li>
+      <span class="lbl">Stop pair routed on Minhal<small>follows a Minhal line of the same mode</small></span><span class="cnt" id="cnt-routed"></span></label></li>
     <li><label><input type="checkbox" id="set-diff" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="1" y1="8" x2="21" y2="8" stroke="var(--diff)" stroke-width="3" stroke-dasharray="4 3"/></svg>
-      <span class="lbl">Routing differs<small>map route much longer than the straight line, or no path</small></span><span class="cnt" id="cnt-diff"></span></label></li>
+      <span class="lbl">Routing differs<small>Minhal route much longer than the straight line, or no path</small></span><span class="cnt" id="cnt-diff"></span></label></li>
     <li><label><input type="checkbox" id="set-off" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="1" y1="8" x2="21" y2="8" stroke="var(--off)" stroke-width="3" stroke-dasharray="4 3"/></svg>
-      <span class="lbl">Off the map network<small>a stop with no map line of the mode within 100 m (Rail 250 m)</small></span><span class="cnt" id="cnt-off"></span></label></li>
+      <span class="lbl">Off the Minhal network<small>a Hubs stop with no Minhal line of the mode within 100 m (Rail 250 m)</small></span><span class="cnt" id="cnt-off"></span></label></li>
   </ul>
-  <p class="eyebrow">External nodes</p>
+  <p class="eyebrow">Hubs project nodes</p>
   <ul class="sets">
     <li><label><input type="checkbox" id="set-nok" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="6" y1="8" x2="16" y2="8" stroke="var(--tie)" stroke-width="1.5"/><circle cx="6" cy="8" r="5" fill="var(--node-ok)" stroke="var(--ring)" stroke-width="1.5"/><circle cx="16" cy="8" r="5" fill="none" stroke="var(--node-ok)" stroke-width="2"/></svg>
-      <span class="lbl">Node with a map station<small>filled = node · ring = station · line = offset</small></span><span class="cnt" id="cnt-nok"></span></label></li>
+      <span class="lbl">Node with a Minhal station<small>filled = Hubs node · ring = Minhal station · line = offset</small></span><span class="cnt" id="cnt-nok"></span></label></li>
     <li><label><input type="checkbox" id="set-nmaybe" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="5" fill="var(--node-maybe)" stroke="var(--ring)" stroke-width="1.5"/></svg>
-      <span class="lbl">Possible station<small>nearest station 150-400 m away</small></span><span class="cnt" id="cnt-nmaybe"></span></label></li>
+      <span class="lbl">Possible Minhal station<small>nearest Minhal station 150-400 m away</small></span><span class="cnt" id="cnt-nmaybe"></span></label></li>
     <li><label><input type="checkbox" id="set-nno" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="5" fill="var(--node-no)" stroke="var(--ring)" stroke-width="1.5"/></svg>
-      <span class="lbl">No map station<small>none within 400 m</small></span><span class="cnt" id="cnt-nno"></span></label></li>
+      <span class="lbl">No Minhal station<small>none within 400 m</small></span><span class="cnt" id="cnt-nno"></span></label></li>
   </ul>
-  <p class="eyebrow">Map network</p>
+  <p class="eyebrow">Minhal network</p>
   <ul class="sets">
     <li><label><input type="checkbox" id="set-used" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="1" y1="8" x2="21" y2="8" stroke="var(--used)" stroke-width="2"/></svg>
-      <span class="lbl">Map lines used by an external line</span><span class="cnt" id="cnt-used"></span></label></li>
+      <span class="lbl">Minhal lines used by a Hubs line</span><span class="cnt" id="cnt-used"></span></label></li>
     <li><label><input type="checkbox" id="set-gap" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="1" y1="8" x2="21" y2="8" stroke="var(--gap)" stroke-width="3.5"/></svg>
-      <span class="lbl">Map lines no external line uses<small>stretches of 300 m or more</small></span><span class="cnt" id="cnt-gap"></span></label></li>
+      <span class="lbl">Minhal lines no Hubs line uses<small>stretches of 300 m or more</small></span><span class="cnt" id="cnt-gap"></span></label></li>
     <li><label><input type="checkbox" id="set-oms" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><circle cx="11" cy="8" r="5" fill="var(--onlym)" stroke="var(--ring)" stroke-width="1.5"/></svg>
-      <span class="lbl">Map stations without a node<small>no external node within 150 m</small></span><span class="cnt" id="cnt-oms"></span></label></li>
+      <span class="lbl">Minhal stations without a Hubs node<small>no Hubs node within 150 m</small></span><span class="cnt" id="cnt-oms"></span></label></li>
   </ul>
-  <p class="eyebrow">Find a line</p>
+  <p class="eyebrow">Find a Hubs line</p>
   <div class="pick">
-    <select id="pick-line" aria-label="External line"><option value="">all lines</option></select>
-    <select id="pick-status" aria-label="Line status"><option value="">any status</option><option value="match">match</option><option value="partial">partial</option><option value="mostly missing">mostly missing</option><option value="missing in map">missing in map</option></select>
+    <select id="pick-line" aria-label="Hubs line"><option value="">all lines</option></select>
+    <select id="pick-status" aria-label="Line status"><option value="">any status</option><option value="match">match</option><option value="partial">partial</option><option value="mostly missing">mostly missing</option><option value="missing in Minhal">missing in Minhal</option></select>
   </div>
   <div class="actions">
     <button type="button" id="btn-fit">Zoom to all</button>
@@ -800,7 +800,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
     <button type="button" id="btn-jlm">Jerusalem</button>
     <button type="button" id="btn-bsh">Be'er Sheva</button>
   </div>
-  <p class="note">Basemap: OpenStreetMap (light gray). Matching is by geometry only; line names are not compared. The order of the stops of each external line is reconstructed (shortest path through its nodes), so a routing difference on a line with loops or branches may come from the ordering. Source: All_nodes+lines_V1.01.csv.</p>
+  <p class="note">Basemap: OpenStreetMap (light gray). Matching is by geometry only; line names are not compared. The order of the stops of each Hubs line is reconstructed (shortest path through its nodes), so a routing difference on a line with loops or branches may come from the ordering. Source: All_nodes+lines_V1.01.csv.</p>
 </section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -819,35 +819,35 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   const groups = {};
   ['used','gap','oms','routed','diff','off','nok','nmaybe','nno'].forEach(k => groups[k] = L.layerGroup().addTo(map));
   const stCls = s => s === 'match' ? 'st-match' : s === 'partial' ? 'st-partial' : 'st-missing';
-  const kindName = {r: 'routed on the map', d: 'routing differs', n: 'no path on the map network', o: 'off the map network'};
+  const kindName = {r: 'routed on Minhal', d: 'routing differs', n: 'no path on the Minhal network', o: 'off the Minhal network'};
 
-  // ---- map network ---------------------------------------------------------------------------
+  // ---- Minhal network ---------------------------------------------------------------------------
   USED.forEach(u => groups.used.addLayer(L.polyline(u.c, {color: tok('--used'), weight: 2, opacity: .7, interactive: false})));
   GAPS.forEach(g => {
     const pl = L.polyline(g.c, {color: tok('--gap'), weight: 4, opacity: .85});
-    pl.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--gap)">Map line no external line uses</span>
-      <dl class="kv"><dt>mode</dt><dd>${esc(g.mode)}</dd><dt>length</dt><dd>${fmt(g.len)} m</dd><dt>nearest external node</dt><dd>${fmt(g.nd)} m · lines ${esc(g.near)}</dd></dl></div>`, {maxWidth: 320});
-    pl.bindTooltip(`${g.mode} · ${fmt(g.len)} m not used by any external line`, {sticky: true});
+    pl.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--gap)">Minhal line no Hubs line uses</span>
+      <dl class="kv"><dt>mode</dt><dd>${esc(g.mode)}</dd><dt>length</dt><dd>${fmt(g.len)} m</dd><dt>nearest Hubs node</dt><dd>${fmt(g.nd)} m · lines ${esc(g.near)}</dd></dl></div>`, {maxWidth: 320});
+    pl.bindTooltip(`${g.mode} · ${fmt(g.len)} m not used by any Hubs line`, {sticky: true});
     groups.gap.addLayer(pl);
   });
   OMS.forEach(p => {
     const m = L.circleMarker([p.lat, p.lng], {radius: 6, color: tok('--ring'), weight: 1.5, fillColor: tok('--onlym'), fillOpacity: .95});
-    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--onlym)">Map station without a node</span>
+    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--onlym)">Minhal station without a Hubs node</span>
       <h2>${esc(p.name)}</h2><dl class="kv"><dt>station id</dt><dd>${p.id}</dd><dt>modes</dt><dd>${esc(p.modes)}</dd><dt>status</dt><dd>${esc(p.stat)}</dd>
-      <dt>nearest node</dt><dd>${fmt(p.d)} m · lines ${esc(p.near)}</dd></dl></div>`, {maxWidth: 320});
-    m.bindTooltip(`${p.name} (map only)`, {direction: 'top', offset: [0, -6]});
+      <dt>nearest Hubs node</dt><dd>${fmt(p.d)} m · lines ${esc(p.near)}</dd></dl></div>`, {maxWidth: 320});
+    m.bindTooltip(`${p.name} (Minhal only)`, {direction: 'top', offset: [0, -6]});
     groups.oms.addLayer(m);
   });
 
-  // ---- external lines ------------------------------------------------------------------------
+  // ---- Hubs project lines ------------------------------------------------------------------------
   const routeLayers = {};                      // route id -> [polyline]
   const counts = {r: 0, d: 0, o: 0};
   const routePopup = (r, s) => `<div class="pp" dir="auto"><span class="st ${stCls(r.status)}">alignment: ${esc(r.status)}</span> <span class="st ${r.sst === 'all' || r.sst === 'most' ? 'st-match' : r.sst === 'some' ? 'st-partial' : 'st-missing'}">stations: ${esc(r.sst)}</span>
       <h2 style="margin-top:6px">${esc(r.lines.join(' / '))}</h2>
-      <dl class="kv"><dt>map mode</dt><dd>${esc(r.mode)}${r.hint && r.hint !== r.mode ? ` <span class="diff">(name hints ${esc(r.hint)})</span>` : ''} · votes ${esc(r.votes)}</dd>
-      <dt>nodes</dt><dd>${r.n} · <span class="${r.nst < r.n ? 'diff' : 'same'}">${r.nst} with a station</span> · ${r.non} on a map ${esc(r.mode)} line</dd>
+      <dl class="kv"><dt>Minhal mode</dt><dd>${esc(r.mode)}${r.hint && r.hint !== r.mode ? ` <span class="diff">(name hints ${esc(r.hint)})</span>` : ''} · votes ${esc(r.votes)}</dd>
+      <dt>nodes</dt><dd>${r.n} · <span class="${r.nst < r.n ? 'diff' : 'same'}">${r.nst} with a Minhal station</span> · ${r.non} on a Minhal ${esc(r.mode)} line</dd>
       <dt>stop pairs</dt><dd>${r.nseg} · ${r.nrt} routed · <span class="${r.ndiff ? 'diff' : ''}">${r.ndiff} routing differ</span> · <span class="${r.noff ? 'bad' : ''}">${r.noff} off network</span></dd>
-      ${s ? `<dt>this pair</dt><dd>${esc(kindName[s.k])} · nodes ${esc(s.a)} → ${esc(s.b)} · straight ${fmt(s.s)} m${s.m != null ? ` · map route ${fmt(s.m)} m` : ''}</dd>` : ''}</dl>
+      ${s ? `<dt>this pair</dt><dd>${esc(kindName[s.k])} · nodes ${esc(s.a)} → ${esc(s.b)} · straight ${fmt(s.s)} m${s.m != null ? ` · Minhal route ${fmt(s.m)} m` : ''}</dd>` : ''}</dl>
       <button type="button" data-zoom="${r.id}">Zoom to line</button></div>`;
   ROUTES.forEach(r => {
     routeLayers[r.id] = [];
@@ -876,10 +876,10 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
     const m = L.circleMarker([p.lat, p.lng], {radius: 5.5, color: tok('--ring'), weight: 1.2, fillColor: col, fillOpacity: .95});
     const stTxt = set === 'nno' ? `<span class="bad">none within 400 m</span> (nearest ${esc(p.sname)} · ${fmt(p.d)} m)`
       : `${esc(p.sname)} · ${esc(p.smodes)} · ${esc(p.sstat)} · <span class="${set === 'nok' ? 'same' : 'diff'}">${fmt(p.d)} m</span>`;
-    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:${col}">${set === 'nok' ? 'Node with a map station' : set === 'nmaybe' ? 'Possible station' : 'No map station'}</span>
-      <h2>node ${esc(p.id)}</h2><dl class="kv"><dt>lines</dt><dd>${esc(p.lines.join(' | '))}</dd><dt>map station</dt><dd>${stTxt}</dd>
-      <dt>map line</dt><dd>${p.on ? `<span class="same">${esc(p.near)} within ${fmt(p.dl)} m</span>` : `<span class="bad">none within 100 m (Rail 250 m)</span> (nearest ${fmt(p.dl)} m)`}</dd></dl></div>`, {maxWidth: 340});
-    m.bindTooltip(`node ${p.id} · ${p.lines.join(' | ')}`, {direction: 'top', offset: [0, -6]});
+    m.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:${col}">${set === 'nok' ? 'Node with a Minhal station' : set === 'nmaybe' ? 'Possible Minhal station' : 'No Minhal station'}</span>
+      <h2>Hubs node ${esc(p.id)}</h2><dl class="kv"><dt>Hubs lines</dt><dd>${esc(p.lines.join(' | '))}</dd><dt>Minhal station</dt><dd>${stTxt}</dd>
+      <dt>Minhal line</dt><dd>${p.on ? `<span class="same">${esc(p.near)} within ${fmt(p.dl)} m</span>` : `<span class="bad">none within 100 m (Rail 250 m)</span> (nearest ${fmt(p.dl)} m)`}</dd></dl></div>`, {maxWidth: 340});
+    m.bindTooltip(`Hubs node ${p.id} · ${p.lines.join(' | ')}`, {direction: 'top', offset: [0, -6]});
     m._lines = p.lines;
     if (p.slat != null) {
       groups[set].addLayer(L.polyline([[p.lat, p.lng], [p.slat, p.slng]], {color: tok('--tie'), weight: 1.2, opacity: .8, interactive: false}));
