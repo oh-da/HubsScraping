@@ -6,6 +6,9 @@ on:
     paths:
       - "tod_scraper/data/out/hub_stations_map.html"
       - "tod_scraper/data/out/tod_israel.xlsx"
+      - "tod_scraper/data/out/hub_comparison_map.html"
+      - "tod_scraper/data/out/line_comparison_map.html"
+      - "tod_scraper/data/out/line_comparison.xlsx"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -33,6 +36,9 @@ jobs:
           cp tod_scraper/data/out/hub_stations_map.html site/index.html
           cp tod_scraper/data/out/hub_stations_map.html site/hub_stations_map.html
           cp tod_scraper/data/out/tod_israel.xlsx site/tod_israel.xlsx
+          cp tod_scraper/data/out/hub_comparison_map.html site/compare.html
+          cp tod_scraper/data/out/line_comparison_map.html site/compare_lines.html
+          cp tod_scraper/data/out/line_comparison.xlsx site/line_comparison.xlsx
           touch site/.nojekyll
 
       - name: Configure Pages
