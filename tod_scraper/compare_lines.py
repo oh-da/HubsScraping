@@ -25,11 +25,14 @@ not follow Minhal's naming, so nothing here relies on names:
 5. reverse - Minhal stations with no Hubs node nearby, and stretches of the Minhal
              network (>= --min-gap metres) that no routed Hubs line uses.
 
-Outputs data/out/line_comparison.xlsx, data/out/line_comparison.gpkg and
-data/out/line_comparison_map.html (an interactive map of all of the above).
+Outputs data/out/line_comparison.xlsx, data/out/line_comparison.gpkg,
+data/out/line_comparison_map.html (an interactive map of all of the above) and
+data/out/line_overlay_map.html (a plain overlay: Hubs lines as their stops joined in
+order over the Minhal lines layer, each layer switchable, with a mode filter).
 
     python compare_lines.py ../Data/All_nodes+lines_V1.01.csv --leaflet-css leaflet.css \
-        [--tol-station 150] [--tol-line 100] [--min-gap 300] [--copy-map-to ../compare_lines.html]
+        [--tol-station 150] [--tol-line 100] [--min-gap 300] \
+        [--copy-map-to ../compare_lines.html] [--copy-overlay-to ../compare_lines_overlay.html]
 """
 from __future__ import annotations
 
@@ -264,6 +267,7 @@ def main() -> int:
     ap.add_argument("--leaflet-css", required=True)
     ap.add_argument("--leaflet-js", default="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js")
     ap.add_argument("--copy-map-to", default=None)
+    ap.add_argument("--copy-overlay-to", default=None, help="also copy the simple Hubs lines vs Minhal lines overlay map here")
     args = ap.parse_args()
     data = Path(args.data)
     out_dir = data / "out"
@@ -607,7 +611,226 @@ def main() -> int:
     if args.copy_map_to:
         Path(args.copy_map_to).write_text(html, encoding="utf-8")
     print(f"wrote {out_h} ({out_h.stat().st_size / 1e6:.2f} MB)")
+
+    # ---- simple overlay: Hubs lines (stops joined in order) vs Minhal lines ------------------------
+    N4 = np.c_[to_wgs(shapely.points(N)).x, to_wgs(shapely.points(N)).y]
+    j_hubs = []
+    for r in routes.values():
+        o = r["order"]
+        j_hubs.append({"id": r["route_id"], "lines": r["lines"], "mode": r["mode"] or "?", "n": len(o),
+                       "raw": [[round(N4[k, 1], 5), round(N4[k, 0], 5)] for k in o],
+                       "adj": [[round(A4[k, 1], 5), round(A4[k, 0], 5)] for k in o],
+                       "nodes": [str(nodes.at[k, "node"]) for k in o]})
+    ln4 = ln.assign(geometry=ln.geometry.simplify(5)).to_crs(4326)
+    j_minhal = [{"id": int(r["line_id"]), "mode": r["mode"], "len": int(r["length_m"]), "c": rc(r.geometry)} for _, r in ln4.iterrows()]
+    modes_present = [m for m in MODES if m in set(ln["mode"]) | {h["mode"] for h in j_hubs}]
+    html = OVERLAY_TEMPLATE
+    for k, v in {"__LEAFLET_CSS__": css, "__LEAFLET_JS__": args.leaflet_js, "__HUBS__": dumps(j_hubs), "__MINHAL__": dumps(j_minhal),
+                 "__MODES__": dumps(modes_present + (["?"] if any(h["mode"] == "?" for h in j_hubs) else [])),
+                 "__CSV_NAME__": Path(args.csv).name, "__N_LINES__": str(n_lines), "__N_ROUTES__": str(len(routes)),
+                 "__N_ML__": str(len(ln)), "__GDX__": f"{glob[0]:+.0f}", "__GDY__": f"{glob[1]:+.0f}"}.items():
+        html = html.replace(k, v)
+    html = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
+            + html.replace('\n<div id="map"', '\n</head>\n<body>\n<div id="map"', 1) + "\n</body>\n</html>\n")
+    out_o = out_dir / "line_overlay_map.html"
+    out_o.write_text(html, encoding="utf-8")
+    if args.copy_overlay_to:
+        Path(args.copy_overlay_to).write_text(html, encoding="utf-8")
+    print(f"wrote {out_o} ({out_o.stat().st_size / 1e6:.2f} MB)")
     return 0
+
+
+OVERLAY_TEMPLATE = r"""<title>Hubs vs Minhal Overlay</title>
+<meta name="description" content="The transit lines of the Hubs project (stops joined in order) drawn over the Minhal lines layer, each layer switchable, with a mode filter.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
+<style>
+__LEAFLET_CSS__
+:root {
+  color-scheme: light;
+  --bg: #f4f3ef; --panel: #fffefb; --panel-border: #dcd9d0; --ink: #1c1b18; --ink-2: #5b5950; --ink-3: #8a877c;
+  --map-bg: #e9e9e9; --shadow: 0 4px 18px rgba(30,28,20,.16); --accent: #2a78d6; --focus: #2a78d6; --ring: #ffffff;
+  --hubs: #eb6834; --minhal: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #17171a; --panel: #212125; --panel-border: #3a3a40; --ink: #f2f1ea; --ink-2: #c3c2b7; --ink-3: #8b8a82;
+    --map-bg: #e9e9e9; --shadow: 0 4px 18px rgba(0,0,0,.5); --accent: #3987e5; --focus: #3987e5; --ring: #ffffff;
+    --hubs: #d95926; --minhal: #2a78d6;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #17171a; --panel: #212125; --panel-border: #3a3a40; --ink: #f2f1ea; --ink-2: #c3c2b7; --ink-3: #8b8a82;
+  --map-bg: #e9e9e9; --shadow: 0 4px 18px rgba(0,0,0,.5); --accent: #3987e5; --focus: #3987e5; --ring: #ffffff;
+  --hubs: #d95926; --minhal: #2a78d6;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heebo", "Segoe UI", system-ui, sans-serif; }
+#map { position: absolute; inset: 0; background: var(--map-bg); }
+.leaflet-container { background: var(--map-bg); font: inherit; }
+.osm-gray { filter: grayscale(1) brightness(1.06) contrast(0.88); }
+.leaflet-bar { box-shadow: var(--shadow); border: 1px solid var(--panel-border); }
+.leaflet-bar a { background: var(--panel); color: var(--ink); border-bottom-color: var(--panel-border); }
+.leaflet-bar a:hover, .leaflet-bar a:focus-visible { background: var(--bg); }
+.leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--ink-3); font-size: 11px; }
+.leaflet-control-attribution a { color: var(--ink-2); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
+.leaflet-popup-content-wrapper { border-radius: 8px; border: 1px solid var(--panel-border); }
+.leaflet-popup-content { margin: 12px 14px; font-size: 13px; min-width: 200px; }
+.leaflet-container a.leaflet-popup-close-button { color: var(--ink-3); }
+.leaflet-container :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.panel { position: absolute; z-index: 1000; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; width: 300px; max-width: calc(100% - 24px); max-height: calc(100% - 24px); overflow: auto;
+  background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; box-shadow: var(--shadow); padding: 14px 16px 12px; box-sizing: border-box; }
+.panel h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
+.panel .sub { margin: 2px 0 0; color: var(--ink-2); font-size: 12.5px; }
+.eyebrow { margin: 14px 0 6px; font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.sets { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.sets label { display: grid; grid-template-columns: 18px 26px 1fr auto; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+.sets label:hover { background: var(--bg); }
+.sets input { margin: 0; width: 15px; height: 15px; accent-color: var(--accent); }
+.sets input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.sets .lbl { font-weight: 500; line-height: 1.2; }
+.sets .lbl small { display: block; font-weight: 400; color: var(--ink-3); font-size: 11.5px; }
+.sets .cnt { color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 13px; text-align: right; }
+.sym { justify-self: center; width: 22px; height: 16px; }
+.modes { display: flex; flex-wrap: wrap; gap: 4px; }
+.modes label { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 3px 8px; border: 1px solid var(--panel-border); border-radius: 99px; cursor: pointer; }
+.modes input { margin: 0; accent-color: var(--accent); }
+.pick select { width: 100%; font: inherit; font-size: 12.5px; padding: 5px 6px; border-radius: 6px; border: 1px solid var(--panel-border); background: var(--bg); color: var(--ink); }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.actions button { flex: 1 1 auto; white-space: nowrap; font: inherit; font-size: 12.5px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--panel-border); background: var(--bg); color: var(--ink); cursor: pointer; }
+.actions button:hover { border-color: var(--ink-3); }
+.actions button:focus-visible, .pick select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.note { margin: 10px 0 0; font-size: 11.5px; color: var(--ink-3); }
+.pp h2 { margin: 0 0 6px; font-size: 14px; font-weight: 700; line-height: 1.25; }
+.pp .tag { display: inline-block; font-size: 11px; font-weight: 500; letter-spacing: .04em; padding: 1px 7px; border-radius: 99px; color: #fff; margin-bottom: 6px; }
+.pp .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 12.5px; }
+.pp .kv dt { color: var(--ink-3); } .pp .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  .panel { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 12px; right: 12px; width: auto; max-height: 50%; }
+  .leaflet-top.leaflet-right { top: env(safe-area-inset-top, 0px); }
+}
+@media (prefers-reduced-motion: reduce) { .leaflet-zoom-anim .leaflet-zoom-animated, .leaflet-fade-anim .leaflet-popup { transition: none; } }
+</style>
+
+<div id="map" role="application" aria-label="Map overlaying the Hubs project lines on the Minhal lines"></div>
+
+<section class="panel" id="panel" aria-label="Layers">
+  <h1>Hubs project vs Minhal: overlay</h1>
+  <p class="sub">__N_LINES__ Hubs project lines (__N_ROUTES__ distinct node sets) drawn as their stops joined in order, over the __N_ML__ Minhal line segments.</p>
+  <p class="eyebrow">Layers</p>
+  <ul class="sets">
+    <li><label><input type="checkbox" id="set-hubs" checked>
+      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><polyline points="1,12 8,4 14,10 21,3" fill="none" stroke="var(--hubs)" stroke-width="2.5"/><circle cx="8" cy="4" r="2.2" fill="var(--hubs)"/><circle cx="14" cy="10" r="2.2" fill="var(--hubs)"/></svg>
+      <span class="lbl">Hubs project lines<small>stops joined by straight lines</small></span><span class="cnt" id="cnt-hubs"></span></label></li>
+    <li><label><input type="checkbox" id="set-minhal" checked>
+      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><path d="M1 12 C 6 2, 12 14, 21 4" fill="none" stroke="var(--minhal)" stroke-width="2.5"/></svg>
+      <span class="lbl">Minhal lines<small>the scraped lines layer</small></span><span class="cnt" id="cnt-minhal"></span></label></li>
+    <li><label><input type="checkbox" id="set-shift">
+      <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="3" y1="8" x2="17" y2="8" stroke="var(--ink-3)" stroke-width="1.5"/><polyline points="13,4 17,8 13,12" fill="none" stroke="var(--ink-3)" stroke-width="1.5"/></svg>
+      <span class="lbl">Shift Hubs lines onto Minhal<small>apply the estimated offset (overall __GDX__ m, __GDY__ m)</small></span></label></li>
+  </ul>
+  <p class="eyebrow">Modes (Hubs mode as read from Minhal)</p>
+  <div class="modes" id="modes"></div>
+  <p class="eyebrow">Find a Hubs line</p>
+  <div class="pick"><select id="pick-line" aria-label="Hubs line"><option value="">all lines</option></select></div>
+  <div class="actions">
+    <button type="button" id="btn-fit">Zoom to all</button>
+    <button type="button" id="btn-tlv">Tel Aviv</button>
+    <button type="button" id="btn-hfa">Haifa</button>
+    <button type="button" id="btn-jlm">Jerusalem</button>
+    <button type="button" id="btn-bsh">Be'er Sheva</button>
+  </div>
+  <p class="note">Basemap: OpenStreetMap (light gray). The Hubs project file has no route geometry, so each line is its stops joined in a reconstructed order. Source: __CSV_NAME__.</p>
+</section>
+
+<script src="__LEAFLET_JS__"></script>
+<script>
+(function () {
+  const HUBS = __HUBS__, MINHAL = __MINHAL__, MODES = __MODES__;
+  const css = getComputedStyle(document.documentElement), tok = n => css.getPropertyValue(n).trim();
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const map = L.map('map', {zoomControl: false, preferCanvas: true});
+  L.control.zoom({position: 'topright'}).addTo(map);
+  map.attributionControl.setPrefix('');
+  map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · TOD Israel explorer (beta)');
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, className: 'osm-gray'}).addTo(map);
+
+  const minhal = L.layerGroup().addTo(map), hubs = L.layerGroup().addTo(map);
+  const modeOn = Object.fromEntries(MODES.map(m => [m, true]));
+  let shifted = false, picked = '';
+
+  const mLayers = MINHAL.map(s => {
+    const pl = L.polyline(s.c, {color: tok('--minhal'), weight: 3, opacity: .8});
+    pl.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--minhal)">Minhal line</span>
+      <dl class="kv"><dt>segment</dt><dd>${s.id}</dd><dt>mode</dt><dd>${esc(s.mode)}</dd><dt>length</dt><dd>${s.len.toLocaleString()} m</dd></dl></div>`);
+    pl.bindTooltip(`Minhal · ${s.mode}`, {sticky: true});
+    pl._mode = s.mode;
+    return pl;
+  });
+  const hLayers = HUBS.map(h => {
+    const g = L.layerGroup();
+    const pl = L.polyline(h.raw, {color: tok('--hubs'), weight: 3, opacity: .85});
+    const popup = `<div class="pp" dir="auto"><span class="tag" style="background:var(--hubs)">Hubs project line</span>
+      <h2>${esc(h.lines.join(' / '))}</h2><dl class="kv"><dt>mode (from Minhal)</dt><dd>${esc(h.mode)}</dd><dt>stops</dt><dd>${h.n}</dd></dl></div>`;
+    pl.bindPopup(popup, {maxWidth: 320}); pl.bindTooltip(`Hubs · ${h.lines.join(' / ')} · ${h.mode}`, {sticky: true});
+    g.addLayer(pl);
+    const dots = h.raw.map((c, i) => {
+      const d = L.circleMarker(c, {radius: 3.2, color: tok('--ring'), weight: 1, fillColor: tok('--hubs'), fillOpacity: 1});
+      d.bindTooltip(`node ${h.nodes[i]} · ${h.lines.join(' / ')}`, {direction: 'top', offset: [0, -4]});
+      d.bindPopup(popup, {maxWidth: 320});
+      g.addLayer(d);
+      return d;
+    });
+    return {g, pl, dots, h};
+  });
+
+  function refresh() {
+    minhal.clearLayers(); hubs.clearLayers();
+    let nm = 0, nh = 0;
+    mLayers.forEach(pl => { if (modeOn[pl._mode]) { minhal.addLayer(pl); nm++; } });
+    hLayers.forEach(({g, pl, dots, h}) => {
+      if (!modeOn[h.mode] || (picked && String(h.id) !== picked)) return;
+      const cs = shifted ? h.adj : h.raw;
+      pl.setLatLngs(cs); dots.forEach((d, i) => d.setLatLng(cs[i]));
+      hubs.addLayer(g); nh++;
+    });
+    document.getElementById('cnt-minhal').textContent = nm;
+    document.getElementById('cnt-hubs').textContent = nh;
+  }
+  const modesBox = document.getElementById('modes');
+  MODES.forEach(m => {
+    const l = document.createElement('label'), i = document.createElement('input');
+    i.type = 'checkbox'; i.checked = true; i.addEventListener('change', () => { modeOn[m] = i.checked; refresh(); });
+    l.appendChild(i); l.appendChild(document.createTextNode(m === '?' ? 'unknown' : m)); modesBox.appendChild(l);
+  });
+  const wire = (id, layer) => document.getElementById(id).addEventListener('change', e => e.target.checked ? layer.addTo(map) : map.removeLayer(layer));
+  wire('set-hubs', hubs); wire('set-minhal', minhal);
+  document.getElementById('set-shift').addEventListener('change', e => { shifted = e.target.checked; refresh(); });
+  const sel = document.getElementById('pick-line');
+  HUBS.slice().sort((a, b) => a.lines[0].localeCompare(b.lines[0])).forEach(h => {
+    const o = document.createElement('option'); o.value = h.id; o.textContent = `${h.lines.join(' / ')} · ${h.mode}`; sel.appendChild(o);
+  });
+  sel.addEventListener('change', () => {
+    picked = sel.value; refresh();
+    if (picked) { const hl = hLayers.find(x => String(x.h.id) === picked); map.fitBounds(hl.pl.getBounds(), {padding: [40, 40]}); }
+  });
+
+  const bounds = L.latLngBounds([].concat(...HUBS.map(h => h.raw)));
+  document.getElementById('btn-fit').addEventListener('click', () => map.fitBounds(bounds, {padding: [30, 30]}));
+  document.getElementById('btn-tlv').addEventListener('click', () => map.setView([32.08, 34.82], 12));
+  document.getElementById('btn-hfa').addEventListener('click', () => map.setView([32.80, 35.02], 12));
+  document.getElementById('btn-jlm').addEventListener('click', () => map.setView([31.78, 35.21], 12));
+  document.getElementById('btn-bsh').addEventListener('click', () => map.setView([31.25, 34.79], 12));
+  const panel = document.getElementById('panel');
+  L.DomEvent.disableClickPropagation(panel); L.DomEvent.disableScrollPropagation(panel);
+  refresh();
+  map.fitBounds(bounds, {padding: [30, 30]});
+})();
+</script>
+"""
 
 
 TEMPLATE = r"""<title>Hubs vs Minhal Lines</title>
