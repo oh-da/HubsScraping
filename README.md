@@ -97,7 +97,8 @@ sources do not correspond and are never compared):
 
 ```bash
 python compare_lines.py ../Data/All_nodes+lines_V1.01.csv \
-    --leaflet-css <leaflet.css> --copy-map-to ../compare_lines.html
+    --leaflet-css <leaflet.css> --copy-map-to ../compare_lines.html \
+    --copy-overlay-to ../compare_lines_overlay.html
 ```
 
 Outputs `data/out/line_comparison.xlsx` (sheets: summary, shift, hubs_lines, hubs_stop_pairs,
@@ -108,6 +109,11 @@ minhal_lines_used, only_minhal_lines, only_minhal_stations; EPSG:2039) and
 https://oh-da.github.io/HubsScraping/compare_lines.html): the Hubs lines routed over Minhal,
 node to station ties, routing differences, Minhal stretches and stations the Hubs project
 lacks, with a picker to isolate one line or one status.
+
+For a plain visual check there is also `data/out/line_overlay_map.html`
+(https://oh-da.github.io/HubsScraping/compare_lines_overlay.html): the Hubs lines (stops
+joined in order) over the Minhal lines layer, each layer switchable on and off, a mode
+filter, a line picker, and a toggle that shifts the Hubs lines by the estimated offset.
 
 ## Quick start
 
