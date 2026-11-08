@@ -76,15 +76,24 @@ Two sources are compared:
   (V1.1 adds the Jerusalem lines MTR11-32 (metro), LRT101/102, BRT11/12 and CC_1/2 (cable car) to
   `All_nodes+lines_V1.01.csv` and drops LRT9.) An optional `mode` column (the Hubs project's
   planned mode) is used as the mode hint; nodes with blank X/Y are reported, not drawn.
-* **Minhal** (מנהל התכנון): the `lines` and `stations` layers scraped from the TOD Israel map
-  by this repository (`tod_israel.gpkg` / `tod_israel.xlsx`).
+* **Minhal** (מנהל התכנון): `Data/MT_Network.gpkg` (field descriptions in
+  `Data/MT_Network_MetaData.xlsx`), EPSG:2039: layer `lines` (221 lines, type Metro / LRT / BRT /
+  Rail / Rail fast / FUNI, line_id, line_name, year_operation, year_cancel, source_plan) and layer
+  `stations` (one row per line x stop, 3,741 rows). Stops within 25 m of each other are merged
+  into one station (`--station-merge`, 2,187 stations); a station's status is its most advanced
+  source_plan (operating > detailed > strategic) and its metropolitan area comes from the
+  `metropolins` layer of `tod_israel.gpkg`. "Rail fast" lines join the Rail network and FUNI is
+  Funicular. Lines with a year_cancel (19 lines, mostly Haifa's Metronit BRT and the old M1/M2
+  alignments, replaced by 2050) are kept, as in the scraped layer. Without `--minhal-gpkg` the
+  script falls back to the `lines` and `stations` layers scraped from the TOD Israel map
+  (`tod_israel.gpkg` / `tod_israel.xlsx`).
 
 `tod_scraper/compare_lines.py` compares them by geometry only (the line names of the two
 sources do not correspond and are never compared):
 
-1. **offset**: the sources do not sit exactly on top of each other (Hubs nodes are about
-   60 m west and 37 m south of the Minhal stations in Tel Aviv and Haifa, 21 m east and
-   37 m north in Be'er Sheva, on the spot in Jerusalem). A local shift field (median
+1. **offset**: the sources do not sit exactly on top of each other (with MT_Network, the
+   Minhal stations are about 60-67 m west and 33-45 m south of the Hubs nodes in Tel Aviv,
+   Haifa and Jerusalem, and 17 m east and 37 m north in Be'er Sheva; sheet `shift`). A local shift field (median
    node to station offset within 10 km) is estimated and applied to the Hubs nodes first;
    raw and corrected distances are both kept.
 2. **mode**: the mode of a Hubs line is the mode whose Minhal lines run under most of its
@@ -100,7 +109,7 @@ sources do not correspond and are never compared):
    Minhal network that no Hubs line uses (parallel carriageways of a used line excluded).
 
 ```bash
-python compare_lines.py ../Data/All_nodes+lines_V1.1.csv \
+python compare_lines.py ../Data/All_nodes+lines_V1.1.csv --minhal-gpkg ../Data/MT_Network.gpkg \
     --leaflet-css <leaflet.css> --copy-map-to ../compare_lines.html \
     --copy-overlay-to ../compare_lines_overlay.html
 ```

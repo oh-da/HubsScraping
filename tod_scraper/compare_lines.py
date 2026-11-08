@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 Compare the transit network of the Hubs project (HubsPrioritizing: csv of node x line
-memberships, ITM coordinates) with the lines and stations of Minhal (the TOD Israel map
-of מנהל התכנון scraped by this repository), by geometry only.
+memberships, ITM coordinates) with the lines and stations of Minhal (מנהל התכנון), by
+geometry only. Minhal is read from its MT_Network geopackage (--minhal-gpkg, layers 'lines'
+and 'stations') or, without it, from the TOD Israel map layers scraped by this repository.
 
 The Hubs project file (Data/All_nodes+lines_V1.1.csv) lists, per line id, the model nodes
 the line stops at, with their ITM coordinates (and, optionally, a 'mode' column with the planned
@@ -31,7 +32,7 @@ data/out/line_comparison_map.html (an interactive map of all of the above) and
 data/out/line_overlay_map.html (a plain overlay: Hubs lines as their stops joined in
 order over the Minhal lines layer, each layer switchable, with a mode filter).
 
-    python compare_lines.py ../Data/All_nodes+lines_V1.1.csv --leaflet-css leaflet.css \
+    python compare_lines.py ../Data/All_nodes+lines_V1.1.csv --minhal-gpkg ../Data/MT_Network.gpkg --leaflet-css leaflet.css \
         [--tol-station 150] [--tol-line 100] [--min-gap 300] \
         [--copy-map-to ../compare_lines.html] [--copy-overlay-to ../compare_lines_overlay.html]
 """
@@ -257,6 +258,57 @@ class ModeNetwork:
         return out
 
 
+MT_MODE = {"Rail fast": "Rail", "FUNI": "Funicular"}             # MT_Network type -> network mode (high-speed rail joins Rail)
+MT_STATUS = {"operating": "Operating", "detailed": "Detailed", "strategic": "Strategic"}
+
+
+def read_minhal_network(path: Path, tod_gpkg: Path, merge_m: float = 25.0):
+    """Minhal stations and lines from an MT_Network geopackage (layers 'lines' and 'stations', EPSG:2039),
+    in the shape the scraped layers have: one station per place (the stops of all lines within merge_m of
+    each other, chained, merged into one) and one row per line part."""
+    sl = gpd.read_file(path, layer="stations").to_crs(ITM)
+    sl = sl[sl.geometry.notna()].copy()
+    sl["mode_name"] = sl["type"].replace({"FUNI": "Funicular"})
+    xy = np.c_[sl.geometry.x, sl.geometry.y]
+    pairs = cKDTree(xy).query_pairs(merge_m, output_type="ndarray")
+    from scipy.sparse.csgraph import connected_components
+    adj = coo_matrix((np.ones(len(pairs)), (pairs[:, 0], pairs[:, 1])), shape=(len(xy), len(xy))) if len(pairs) else coo_matrix((len(xy), len(xy)))
+    sl["key"] = connected_components(adj, directed=False)[1]
+    rank = {"Operating": 0, "Detailed": 1, "Strategic": 2}
+    sl["status"] = sl["source_plan"].map(MT_STATUS).fillna("")
+    rows = []
+    for k, g in sl.groupby("key", sort=False):
+        stat = min(g["status"], key=lambda s: rank.get(s, 9))
+        cancel = g["year_cancel"]
+        rows.append({"name": str(g["station_name"].iloc[0]), "modes": ", ".join(sorted(set(g["mode_name"]))),
+                     "n_modes": g["mode_name"].nunique(), "planning_status": stat, "yearOperation": int(g["year_operation"].min()),
+                     "yearCancel": int(cancel.min()) if cancel.notna().all() else None,
+                     "lines": " | ".join(f"{t} {i}" for t, i in dict.fromkeys(zip(g["mode_name"], g["line_id"]))),
+                     "hub_id": g["hub_id"].dropna().iloc[0] if g["hub_id"].notna().any() else None,
+                     "x_itm": float(g.geometry.x.mean()), "y_itm": float(g.geometry.y.mean())})
+    st = pd.DataFrame(rows)
+    st.insert(0, "id", np.arange(1, len(st) + 1))
+    pts = gpd.GeoDataFrame(st[["id"]], geometry=gpd.points_from_xy(st["x_itm"], st["y_itm"]), crs=ITM)
+    try:
+        mt = gpd.read_file(tod_gpkg, layer="metropolins").to_crs(ITM)[["METRO_NAME", "geometry"]]
+        j = gpd.sjoin(pts, mt, how="left", predicate="within").drop_duplicates("id")
+        st["metropolin"] = j["METRO_NAME"].values
+    except Exception:                                                 # no metropolins layer: shift table falls back to 'other'
+        st["metropolin"] = None
+    w = pts.to_crs(4326)
+    st["lng"], st["lat"] = w.geometry.x, w.geometry.y
+
+    ln = gpd.read_file(path, layer="lines").to_crs(ITM)
+    ln["minhal_type"] = ln["type"]
+    ln["mode"] = ln["type"].replace(MT_MODE)
+    ln["status"] = ln["source_plan"].map(MT_STATUS).fillna("")
+    ln["line_name"] = ln["line_name"].fillna(ln["name"])
+    ln = ln.explode(index_parts=False).reset_index(drop=True)
+    ln["part_id"] = np.arange(1, len(ln) + 1)
+    ln["length_m"] = ln.geometry.length.round(0)
+    return st, ln
+
+
 def to_wgs(geoms, crs=ITM):
     return gpd.GeoSeries(geoms, crs=crs).to_crs(4326)
 
@@ -271,6 +323,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("csv", help="Hubs project node x line csv (node, LINE_ID, X, Y in EPSG:2039, optional mode)")
     ap.add_argument("--data", default="data")
+    ap.add_argument("--station-merge", type=float, default=25, help="with --minhal-gpkg: merge stops closer than this (m) into one station")
+    ap.add_argument("--minhal-gpkg", default=None, help="Minhal network geopackage (MT_Network.gpkg: layers lines, stations) instead of the scraped layers")
     ap.add_argument("--tol-station", type=float, default=150, help="Hubs node <-> Minhal station match radius (m, after shift)")
     ap.add_argument("--tol-line", type=float, default=100, help="Hubs node <-> Minhal line radius (m): on the network / mode vote")
     ap.add_argument("--tol-line-rail", type=float, default=250, help="same for Rail (stations sit further from the drawn track)")
@@ -296,12 +350,19 @@ def main() -> int:
     nodes["lines"] = nodes["node"].map(ext.groupby("node")["LINE_ID"].agg(list))
     N = nodes[["X", "Y"]].to_numpy(float)
 
-    st = pd.read_excel(out_dir / "tod_israel.xlsx", sheet_name="stations")
-    if "x_itm" not in st.columns:
-        g = gpd.GeoSeries(gpd.points_from_xy(st["lng"], st["lat"]), crs=4326).to_crs(ITM)
-        st["x_itm"], st["y_itm"] = g.x, g.y
+    if args.minhal_gpkg:
+        st, ln = read_minhal_network(Path(args.minhal_gpkg), out_dir / "tod_israel.gpkg", args.station_merge)
+        minhal_src = Path(args.minhal_gpkg).name
+        minhal_note = f"{minhal_src}: 'stations' (stops within {args.station_merge:.0f} m of each other merged into one station) / 'lines' (split into parts)"
+    else:
+        st = pd.read_excel(out_dir / "tod_israel.xlsx", sheet_name="stations")
+        if "x_itm" not in st.columns:
+            g = gpd.GeoSeries(gpd.points_from_xy(st["lng"], st["lat"]), crs=4326).to_crs(ITM)
+            st["x_itm"], st["y_itm"] = g.x, g.y
+        ln = gpd.read_file(out_dir / "tod_israel.gpkg", layer="lines").to_crs(ITM)
+        minhal_src = "TOD Israel explorer (beta)"
+        minhal_note = "tod_israel.xlsx 'stations', tod_israel.gpkg 'lines' (scraped)"
     S = st[["x_itm", "y_itm"]].to_numpy(float)
-    ln = gpd.read_file(out_dir / "tod_israel.gpkg", layer="lines").to_crs(ITM)
     ln = ln[ln.geometry.notna() & (ln.geometry.length > 0)].reset_index(drop=True)
     nets = {m: ModeNetwork(ln.loc[ln["mode"] == m, "geometry"]) for m in MODES if (ln["mode"] == m).any()}
     unions = {m: unary_union(list(ln.loc[ln["mode"] == m, "geometry"])) for m in nets}
@@ -465,7 +526,7 @@ def main() -> int:
     st["nearest_hubs_node"] = nodes.loc[i_s2n, "node"].values
     st["nearest_hubs_node_lines"] = nodes.loc[i_s2n, "lines_str"].values
     only_map_st = st.loc[st["dist_hubs_node_m"] > args.tol_station,
-                         [c for c in ["id", "name", "modes", "n_modes", "planning_status", "yearOperation", "hub_id", "municipality",
+                         [c for c in ["id", "name", "modes", "n_modes", "planning_status", "yearOperation", "yearCancel", "lines", "hub_id", "municipality",
                                       "metropolin", "lng", "lat", "dist_hubs_node_m", "nearest_hubs_node", "nearest_hubs_node_lines"] if c in st.columns]]
     only_map_st = only_map_st.sort_values(["planning_status", "dist_hubs_node_m"], ascending=[True, False])
 
@@ -519,7 +580,7 @@ def main() -> int:
         {"item": "Hubs project nodes without coordinates (left out)", "value": int(no_xy["node"].nunique()),
          "note": f"{len(no_xy)} node x line rows; lines with no located node at all: {len(no_xy_lines)}"
                  + (f" ({', '.join(no_xy_lines)})" if no_xy_lines else "") + "; sheet 'hubs_nodes_no_xy'"},
-        {"item": "Minhal stations / line segments", "value": f"{len(st)} / {len(ln)}", "note": "tod_israel.xlsx 'stations', tod_israel.gpkg 'lines'"},
+        {"item": "Minhal stations / line segments", "value": f"{len(st)} / {len(ln)}", "note": minhal_note},
         {"item": "offset Hubs -> Minhal, global median (m)", "value": f"dx {glob[0]:+.1f}, dy {glob[1]:+.1f}",
          "note": f"shift mode '{args.shift}'; the sheet 'shift' lists it per metropolitan area; applied to the Hubs nodes before matching"},
         {"item": "Hubs nodes with a Minhal station", "value": int(nodes["minhal_station_match"].sum()), "note": f"within {args.tol_station:.0f} m after shift ({int((d_raw <= args.tol_station).sum())} before shift)"},
@@ -625,7 +686,7 @@ def main() -> int:
                  "__USED__": dumps(j_used), "__GAPS__": dumps(j_gaps), "__OMS__": dumps(j_oms), "__SHIFT__": dumps(j_shift),
                  "__TOLS__": f"{args.tol_station:.0f}", "__TOLL__": f"{args.tol_line:.0f}", "__TOLR__": f"{args.tol_line_rail:.0f}", "__MINGAP__": f"{args.min_gap:.0f}",
                  "__NEAR__": f"{args.near:.0f}",
-                 "__CSV_NAME__": Path(args.csv).name, "__N_LINES__": str(n_lines), "__N_ROUTES__": str(len(routes)), "__N_NODES__": str(n_nodes),
+                 "__MINHAL_SRC__": minhal_src, "__CSV_NAME__": Path(args.csv).name, "__N_LINES__": str(n_lines), "__N_ROUTES__": str(len(routes)), "__N_NODES__": str(n_nodes),
                  "__N_ST__": str(len(st)), "__GDX__": f"{glob[0]:+.0f}", "__GDY__": f"{glob[1]:+.0f}"}.items():
         html = html.replace(k, v)
     html = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -647,12 +708,18 @@ def main() -> int:
                        "adj": [[round(A4[k, 1], 5), round(A4[k, 0], 5)] for k in o],
                        "nodes": [str(nodes.at[k, "node"]) for k in o]})
     ln4 = ln.assign(geometry=ln.geometry.simplify(5)).to_crs(4326)
-    j_minhal = [{"id": int(r["line_id"]), "mode": r["mode"], "len": int(r["length_m"]), "c": rc(r.geometry)} for _, r in ln4.iterrows()]
+    def minhal_props(r):
+        o = {"id": int(r["part_id"]) if "part_id" in r else int(r["line_id"]), "mode": r["mode"], "len": int(r["length_m"]), "c": rc(r.geometry)}
+        if "part_id" in r:                                    # MT_Network: line id, name, years, plan status
+            o.update(type=str(r["minhal_type"]), line=int(r["line_id"]), name=str(r["line_name"]), yr=int(r["year_operation"]),
+                     cx=None if pd.isna(r["year_cancel"]) else str(r["year_cancel"]), st=r["status"])
+        return o
+    j_minhal = [minhal_props(r) for _, r in ln4.iterrows()]
     modes_present = [m for m in MODES if m in set(ln["mode"]) | {h["mode"] for h in j_hubs}]
     html = OVERLAY_TEMPLATE
     for k, v in {"__LEAFLET_CSS__": css, "__LEAFLET_JS__": args.leaflet_js, "__HUBS__": dumps(j_hubs), "__MINHAL__": dumps(j_minhal),
                  "__MODES__": dumps(modes_present + (["?"] if any(h["mode"] == "?" for h in j_hubs) else [])),
-                 "__CSV_NAME__": Path(args.csv).name, "__N_LINES__": str(n_lines), "__N_ROUTES__": str(len(routes)),
+                 "__MINHAL_SRC__": minhal_src, "__CSV_NAME__": Path(args.csv).name, "__N_LINES__": str(n_lines), "__N_ROUTES__": str(len(routes)),
                  "__N_ML__": str(len(ln)), "__GDX__": f"{glob[0]:+.0f}", "__GDY__": f"{glob[1]:+.0f}"}.items():
         html = html.replace(k, v)
     html = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -752,7 +819,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
       <span class="lbl">Hubs project lines<small>stops joined by straight lines</small></span><span class="cnt" id="cnt-hubs"></span></label></li>
     <li><label><input type="checkbox" id="set-minhal" checked>
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><path d="M1 12 C 6 2, 12 14, 21 4" fill="none" stroke="var(--minhal)" stroke-width="2.5"/></svg>
-      <span class="lbl">Minhal lines<small>the scraped lines layer</small></span><span class="cnt" id="cnt-minhal"></span></label></li>
+      <span class="lbl">Minhal lines<small>__MINHAL_SRC__ lines layer</small></span><span class="cnt" id="cnt-minhal"></span></label></li>
     <li><label><input type="checkbox" id="set-shift">
       <svg class="sym" viewBox="0 0 22 16" aria-hidden="true"><line x1="3" y1="8" x2="17" y2="8" stroke="var(--ink-3)" stroke-width="1.5"/><polyline points="13,4 17,8 13,12" fill="none" stroke="var(--ink-3)" stroke-width="1.5"/></svg>
       <span class="lbl">Shift Hubs lines onto Minhal<small>apply the estimated offset (overall __GDX__ m, __GDY__ m)</small></span></label></li>
@@ -780,7 +847,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   const map = L.map('map', {zoomControl: false, preferCanvas: true});
   L.control.zoom({position: 'topright'}).addTo(map);
   map.attributionControl.setPrefix('');
-  map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · TOD Israel explorer (beta)');
+  map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Minhal: __MINHAL_SRC__');
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, className: 'osm-gray'}).addTo(map);
 
   const minhal = L.layerGroup().addTo(map), hubs = L.layerGroup().addTo(map);
@@ -790,7 +857,8 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   const mLayers = MINHAL.map(s => {
     const pl = L.polyline(s.c, {color: tok('--minhal'), weight: 3, opacity: .8});
     pl.bindPopup(`<div class="pp" dir="auto"><span class="tag" style="background:var(--minhal)">Minhal line</span>
-      <dl class="kv"><dt>segment</dt><dd>${s.id}</dd><dt>mode</dt><dd>${esc(s.mode)}</dd><dt>length</dt><dd>${s.len.toLocaleString()} m</dd></dl></div>`);
+      ${s.name ? `<h2>${esc(s.name)}</h2>` : ''}<dl class="kv">${s.line !== undefined ? `<dt>line id</dt><dd>${s.line}</dd>` : `<dt>segment</dt><dd>${s.id}</dd>`}<dt>mode</dt><dd>${esc(s.type || s.mode)}</dd>
+      ${s.st ? `<dt>status</dt><dd>${esc(s.st)}</dd>` : ''}${s.yr ? `<dt>operation</dt><dd>${s.yr}${s.cx ? ` · cancelled ${esc(s.cx)}` : ''}</dd>` : ''}<dt>length</dt><dd>${s.len.toLocaleString()} m</dd></dl></div>`);
     pl.bindTooltip(`Minhal · ${s.mode}`, {sticky: true});
     pl._mode = s.mode;
     return pl;
@@ -1005,7 +1073,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   const map = L.map('map', {zoomControl: false, preferCanvas: true});
   L.control.zoom({position: 'topright'}).addTo(map);
   map.attributionControl.setPrefix('');
-  map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · TOD Israel explorer (beta)');
+  map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Minhal: __MINHAL_SRC__');
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, className: 'osm-gray'}).addTo(map);
 
   const groups = {};
