@@ -262,12 +262,13 @@ MT_MODE = {"Rail fast": "Rail", "FUNI": "Funicular"}             # MT_Network ty
 MT_STATUS = {"operating": "Operating", "detailed": "Detailed", "strategic": "Strategic"}
 
 
-def read_minhal_network(path: Path, tod_gpkg: Path, merge_m: float = 25.0):
+def read_minhal_network(path: Path, tod_gpkg: Path, merge_m: float = 25.0, keep_cancelled: bool = False):
     """Minhal stations and lines from an MT_Network geopackage (layers 'lines' and 'stations', EPSG:2039),
     in the shape the scraped layers have: one station per place (the stops of all lines within merge_m of
-    each other, chained, merged into one) and one row per line part."""
+    each other, chained, merged into one) and one row per line part. Lines and stops with a year_cancel
+    are dropped unless keep_cancelled."""
     sl = gpd.read_file(path, layer="stations").to_crs(ITM)
-    sl = sl[sl.geometry.notna()].copy()
+    sl = sl[sl.geometry.notna() & (keep_cancelled or sl["year_cancel"].isna())].copy()
     sl["mode_name"] = sl["type"].replace({"FUNI": "Funicular"})
     xy = np.c_[sl.geometry.x, sl.geometry.y]
     pairs = cKDTree(xy).query_pairs(merge_m, output_type="ndarray")
@@ -299,6 +300,8 @@ def read_minhal_network(path: Path, tod_gpkg: Path, merge_m: float = 25.0):
     st["lng"], st["lat"] = w.geometry.x, w.geometry.y
 
     ln = gpd.read_file(path, layer="lines").to_crs(ITM)
+    if not keep_cancelled:
+        ln = ln[ln["year_cancel"].isna()].copy()
     ln["minhal_type"] = ln["type"]
     ln["mode"] = ln["type"].replace(MT_MODE)
     ln["status"] = ln["source_plan"].map(MT_STATUS).fillna("")
@@ -323,6 +326,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("csv", help="Hubs project node x line csv (node, LINE_ID, X, Y in EPSG:2039, optional mode)")
     ap.add_argument("--data", default="data")
+    ap.add_argument("--keep-cancelled", action="store_true", help="with --minhal-gpkg: keep lines and stops that have a year_cancel")
     ap.add_argument("--station-merge", type=float, default=25, help="with --minhal-gpkg: merge stops closer than this (m) into one station")
     ap.add_argument("--minhal-gpkg", default=None, help="Minhal network geopackage (MT_Network.gpkg: layers lines, stations) instead of the scraped layers")
     ap.add_argument("--tol-station", type=float, default=150, help="Hubs node <-> Minhal station match radius (m, after shift)")
@@ -351,9 +355,10 @@ def main() -> int:
     N = nodes[["X", "Y"]].to_numpy(float)
 
     if args.minhal_gpkg:
-        st, ln = read_minhal_network(Path(args.minhal_gpkg), out_dir / "tod_israel.gpkg", args.station_merge)
+        st, ln = read_minhal_network(Path(args.minhal_gpkg), out_dir / "tod_israel.gpkg", args.station_merge, args.keep_cancelled)
         minhal_src = Path(args.minhal_gpkg).name
-        minhal_note = f"{minhal_src}: 'stations' (stops within {args.station_merge:.0f} m of each other merged into one station) / 'lines' (split into parts)"
+        minhal_note = (f"{minhal_src}: 'stations' (stops within {args.station_merge:.0f} m of each other merged into one station) / 'lines' (split into parts); "
+                       + ("cancelled lines kept" if args.keep_cancelled else "lines and stops with a year_cancel left out"))
     else:
         st = pd.read_excel(out_dir / "tod_israel.xlsx", sheet_name="stations")
         if "x_itm" not in st.columns:

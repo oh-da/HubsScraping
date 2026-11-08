@@ -59,7 +59,8 @@ Minhal's multi-modal hubs by location, 400 m tolerance by default. With `--minha
 ../Data/MT_Network.gpkg` a Minhal hub is a `hub_id` of the MT_Network `stations` layer: its
 stops (all lines) grouped, placed at their mean position (`spread_m` is the farthest stop from
 it), named after the most common street in its stop names, and kept when it serves 2 or more
-modes (426 hub_ids, 207 kept). Without the option the scraped stations are used (hub_id set,
+modes (426 hub_ids, 207 kept). Stops with a year_cancel are left out here too
+(`--keep-cancelled`); none of them belongs to a hub. Without the option the scraped stations are used (hub_id set,
 n_modes >= 2).
 
 ```bash
@@ -88,8 +89,9 @@ Two sources are compared:
   into one station (`--station-merge`, 2,187 stations); a station's status is its most advanced
   source_plan (operating > detailed > strategic) and its metropolitan area comes from the
   `metropolins` layer of `tod_israel.gpkg`. "Rail fast" lines join the Rail network and FUNI is
-  Funicular. Lines with a year_cancel (19 lines, mostly Haifa's Metronit BRT and the old M1/M2
-  alignments, replaced by 2050) are kept, as in the scraped layer. Without `--minhal-gpkg` the
+  Funicular. Lines and stops with a year_cancel (20 line parts and 806 stops: Haifa's Metronit
+  BRT, two Rishon LeZion BRT lines, the old M1/M2 alignments, two short rail links, all cancelled
+  by 2050, and the Haifa metro, cancelled by 2060) are left out (`--keep-cancelled` keeps them). Without `--minhal-gpkg` the
   script falls back to the `lines` and `stations` layers scraped from the TOD Israel map
   (`tod_israel.gpkg` / `tod_israel.xlsx`).
 

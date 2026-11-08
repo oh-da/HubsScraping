@@ -56,11 +56,12 @@ def norm_modes(v) -> list[str]:
 MT_STATUS = {"operating": "Operating", "detailed": "Detailed", "strategic": "Strategic"}
 
 
-def read_mt_hubs(path: Path, tod_gpkg: Path) -> pd.DataFrame:
+def read_mt_hubs(path: Path, tod_gpkg: Path, keep_cancelled: bool = False) -> pd.DataFrame:
     """One row per hub_id of the MT_Network 'stations' layer (one row per line x stop), in the
-    columns of the scraped stations sheet: modes ' | '-joined, n_modes, lines, status, lng/lat."""
+    columns of the scraped stations sheet: modes ' | '-joined, n_modes, lines, status, lng/lat.
+    Stops with a year_cancel are dropped unless keep_cancelled."""
     s = gpd.read_file(path, layer="stations").to_crs(ITM)
-    s = s[s["hub_id"].notna() & s.geometry.notna()].copy()
+    s = s[s["hub_id"].notna() & s.geometry.notna() & (keep_cancelled or s["year_cancel"].isna())].copy()
     s["mode"] = s["type"].replace({"FUNI": "Funicular"})
     s["status"] = s["source_plan"].map(MT_STATUS).fillna("")
     rank = {"Operating": 0, "Detailed": 1, "Strategic": 2}
@@ -94,6 +95,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("xlsx", help="external hub list (needs x/y or lon/lat columns in WGS84)")
     ap.add_argument("--data", default="data")
+    ap.add_argument("--keep-cancelled", action="store_true", help="with --minhal-gpkg: keep stops that have a year_cancel")
     ap.add_argument("--minhal-gpkg", default=None, help="Minhal MT_Network geopackage; its hubs replace the scraped stations")
     ap.add_argument("--tolerance", type=float, default=400, help="match radius in metres")
     ap.add_argument("--near", type=float, default=1000, help="upper radius for 'possible' matches")
@@ -118,7 +120,7 @@ def main() -> int:
     gx = gpd.GeoDataFrame(ext, geometry=gpd.points_from_xy(ext[xcol], ext[ycol]), crs="EPSG:4326").to_crs(ITM)
 
     if args.minhal_gpkg:
-        st = read_mt_hubs(Path(args.minhal_gpkg), data / "out" / "tod_israel.gpkg")
+        st = read_mt_hubs(Path(args.minhal_gpkg), data / "out" / "tod_israel.gpkg", args.keep_cancelled)
         minhal_src = Path(args.minhal_gpkg).name
     else:
         st = pd.read_excel(data / "out" / "tod_israel.xlsx", sheet_name="stations")
@@ -181,7 +183,8 @@ def main() -> int:
         {"set": "only in map", "xlsx hubs": None, "map hubs": len(only_map), "note": "no xlsx hub within tolerance"},
         {"set": "possible (review)", "xlsx hubs": int((possible["side"].str.startswith("xlsx")).sum()),
          "map hubs": int((possible["side"].str.startswith("map")).sum()), "note": f"nearest neighbour {args.tolerance:.0f}-{args.near:.0f} m away"},
-        {"set": "totals", "xlsx hubs": len(gx), "map hubs": len(gm), "note": f"xlsx: {Path(args.xlsx).name}; map ({minhal_src}): hub_id set and n_modes>={args.min_modes}"},
+        {"set": "totals", "xlsx hubs": len(gx), "map hubs": len(gm), "note": f"xlsx: {Path(args.xlsx).name}; map ({minhal_src}): hub_id set and n_modes>={args.min_modes}"
+                 + ("" if not args.minhal_gpkg else ", cancelled stops kept" if args.keep_cancelled else ", stops with a year_cancel left out")},
         {"set": "modes agree (in both)", "xlsx hubs": None, "map hubs": int(both["modes_equal"].sum()),
          "note": "same mode set after mapping Interurban/Suburban->Rail, HighSpeed->Rail fast"},
     ])
