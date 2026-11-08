@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
 Compare an external hub list (xlsx with lon/lat columns) against the multi-modal
-hubs of the TOD Israel map (stations with hub_id set and n_modes >= 2).
+hubs of Minhal (מנהל התכנון): with --minhal-gpkg, the hubs of the MT_Network geopackage
+(the stops of its 'stations' layer grouped by hub_id, placed at their mean position, kept
+when they serve n_modes >= 2 modes); without it, the stations of the scraped TOD Israel
+map with hub_id set and n_modes >= 2.
 
 Matching is spatial: each map hub is paired with the nearest external hub within
 --tolerance metres (EPSG:2039). Three sets come out:
@@ -15,7 +18,8 @@ manual review. Writes an Excel workbook and an interactive HTML map that draws
 every pair one on top of the other with a tie line showing the offset.
 
     python compare_hubs.py PRIORITIZATION.xlsx --leaflet-css leaflet.css \
-        [--tolerance 400] [--near 1000] [--min-modes 2] [--copy-map-to ../compare.html]
+        [--minhal-gpkg ../Data/MT_Network.gpkg] [--tolerance 400] [--near 1000] [--min-modes 2] \
+        [--copy-map-to ../compare.html]
 """
 from __future__ import annotations
 
@@ -49,10 +53,48 @@ def norm_modes(v) -> list[str]:
     return out
 
 
+MT_STATUS = {"operating": "Operating", "detailed": "Detailed", "strategic": "Strategic"}
+
+
+def read_mt_hubs(path: Path, tod_gpkg: Path) -> pd.DataFrame:
+    """One row per hub_id of the MT_Network 'stations' layer (one row per line x stop), in the
+    columns of the scraped stations sheet: modes ' | '-joined, n_modes, lines, status, lng/lat."""
+    s = gpd.read_file(path, layer="stations").to_crs(ITM)
+    s = s[s["hub_id"].notna() & s.geometry.notna()].copy()
+    s["mode"] = s["type"].replace({"FUNI": "Funicular"})
+    s["status"] = s["source_plan"].map(MT_STATUS).fillna("")
+    rank = {"Operating": 0, "Detailed": 1, "Strategic": 2}
+    rows = []
+    for hid, g in s.groupby("hub_id"):
+        base = g["station_name"].astype(str).str.replace(r"\s*-\s*\d+\s*$", "", regex=True).str.strip()
+        base = base[base != ""]
+        modes = sorted(set(g["mode"]), key=lambda m: MODE_ORDER.index(m) if m in MODE_ORDER else 99)
+        rows.append({"hub_id": int(hid), "id": int(hid), "name": base.mode().iloc[0] if len(base) else str(g["station_name"].iloc[0]),
+                     "n_modes": len(modes), "modes": " | ".join(modes), "line_sum": len(set(zip(g["mode"], g["line_id"]))),
+                     "lines": " | ".join(f"{t} {i}" for t, i in sorted(set(zip(g["mode"], g["line_id"])))),
+                     "n_stops": len(g), "rail_hub": bool(g["rail_hub"].eq(1).any()),
+                     "planning_status": min(g["status"], key=lambda v: rank.get(v, 9)), "yearOperation": int(g["year_operation"].min()),
+                     "yearCancel": int(g["year_cancel"].min()) if g["year_cancel"].notna().all() else None,
+                     "spread_m": round(float(np.hypot(g.geometry.x - g.geometry.x.mean(), g.geometry.y - g.geometry.y.mean()).max())),
+                     "x": float(g.geometry.x.mean()), "y": float(g.geometry.y.mean())})
+    h = pd.DataFrame(rows)
+    pts = gpd.GeoDataFrame(h[["hub_id"]], geometry=gpd.points_from_xy(h["x"], h["y"]), crs=ITM)
+    try:
+        mt = gpd.read_file(tod_gpkg, layer="metropolins").to_crs(ITM)[["METRO_NAME", "ZONE_NAME", "geometry"]]
+        j = gpd.sjoin(pts, mt, how="left", predicate="within").drop_duplicates("hub_id")
+        h["metropolin"], h["metropolin_ring"] = j["METRO_NAME"].values, j["ZONE_NAME"].values
+    except Exception:  # noqa: BLE001
+        h["metropolin"], h["metropolin_ring"] = None, None
+    w = pts.to_crs(4326)
+    h["lng"], h["lat"] = w.geometry.x, w.geometry.y
+    return h.drop(columns=["x", "y"])
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("xlsx", help="external hub list (needs x/y or lon/lat columns in WGS84)")
     ap.add_argument("--data", default="data")
+    ap.add_argument("--minhal-gpkg", default=None, help="Minhal MT_Network geopackage; its hubs replace the scraped stations")
     ap.add_argument("--tolerance", type=float, default=400, help="match radius in metres")
     ap.add_argument("--near", type=float, default=1000, help="upper radius for 'possible' matches")
     ap.add_argument("--min-modes", type=int, default=2)
@@ -75,7 +117,12 @@ def main() -> int:
     ext["modes_norm"] = ext["Mode_Planned"].map(norm_modes) if "Mode_Planned" in ext.columns else [[]] * len(ext)
     gx = gpd.GeoDataFrame(ext, geometry=gpd.points_from_xy(ext[xcol], ext[ycol]), crs="EPSG:4326").to_crs(ITM)
 
-    st = pd.read_excel(data / "out" / "tod_israel.xlsx", sheet_name="stations")
+    if args.minhal_gpkg:
+        st = read_mt_hubs(Path(args.minhal_gpkg), data / "out" / "tod_israel.gpkg")
+        minhal_src = Path(args.minhal_gpkg).name
+    else:
+        st = pd.read_excel(data / "out" / "tod_israel.xlsx", sheet_name="stations")
+        minhal_src = "TOD Israel explorer (beta)"
     mp = st[st["hub_id"].notna() & (st["n_modes"] >= args.min_modes)].copy().reset_index(drop=True)
     mp["modes_norm"] = mp["modes"].map(lambda s: norm_modes(str(s).split(" | ")))
     gm = gpd.GeoDataFrame(mp, geometry=gpd.points_from_xy(mp["lng"], mp["lat"]), crs="EPSG:4326").to_crs(ITM)
@@ -101,8 +148,9 @@ def main() -> int:
     ext_cols = ["xlsx_row", "group", "HubNameHE", "Metro", "location", "HubType", "Num_Modes", "Overall_Rank",
                 "TotalNumLines", "TotalDemand_100", "Mode_Planned", xcol, ycol]
     ext_cols = [c for c in ext_cols if c in gx.columns]
-    map_cols = ["hub_id", "id", "name", "n_modes", "modes", "type_sum", "line_sum", "planning_status",
-                "yearOperation", "municipality", "metropolin", "metropolin_ring", "lng", "lat"]
+    map_cols = ["hub_id", "id", "name", "n_modes", "modes", "type_sum", "line_sum", "lines", "n_stops", "rail_hub", "spread_m",
+                "planning_status", "yearOperation", "yearCancel", "municipality", "metropolin", "metropolin_ring", "lng", "lat"]
+    map_cols = [c for c in map_cols if c in gm.columns]
 
     both = gm.loc[matched_map, map_cols + ["dist_m", "nearest_xlsx_row", "modes_norm"]].copy()
     both = both.merge(gx[ext_cols + ["modes_norm"]].rename(columns={c: f"xlsx_{c}" for c in ext_cols + ["modes_norm"]}),
@@ -133,7 +181,7 @@ def main() -> int:
         {"set": "only in map", "xlsx hubs": None, "map hubs": len(only_map), "note": "no xlsx hub within tolerance"},
         {"set": "possible (review)", "xlsx hubs": int((possible["side"].str.startswith("xlsx")).sum()),
          "map hubs": int((possible["side"].str.startswith("map")).sum()), "note": f"nearest neighbour {args.tolerance:.0f}-{args.near:.0f} m away"},
-        {"set": "totals", "xlsx hubs": len(gx), "map hubs": len(gm), "note": f"xlsx: {Path(args.xlsx).name}; map: hub_id set and n_modes>={args.min_modes}"},
+        {"set": "totals", "xlsx hubs": len(gx), "map hubs": len(gm), "note": f"xlsx: {Path(args.xlsx).name}; map ({minhal_src}): hub_id set and n_modes>={args.min_modes}"},
         {"set": "modes agree (in both)", "xlsx hubs": None, "map hubs": int(both["modes_equal"].sum()),
          "note": "same mode set after mapping Interurban/Suburban->Rail, HighSpeed->Rail fast"},
     ])
@@ -183,7 +231,7 @@ def main() -> int:
     for k, v in {"__LEAFLET_CSS__": css, "__LEAFLET_JS__": args.leaflet_js, "__PAIRS__": dumps(pairs),
                  "__ONLY_XLSX__": dumps(ox), "__ONLY_MAP__": dumps(om), "__TOL__": f"{args.tolerance:.0f}",
                  "__XLSX_NAME__": Path(args.xlsx).name, "__N_X__": str(len(gx)), "__N_M__": str(len(gm)),
-                 "__MINM__": str(args.min_modes)}.items():
+                 "__MINM__": str(args.min_modes), "__MINHAL_SRC__": minhal_src}.items():
         html = html.replace(k, v)
     if not args.fragment:
         html = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -198,7 +246,7 @@ def main() -> int:
 
 
 TEMPLATE = r"""<title>Hub List Comparison</title>
-<meta name="description" content="Multi-modal hubs of מנהל התכנון (the TOD Israel map) compared with פרויקט תעדוף מתחמים (the hub prioritization list): in both, only in one of them.">
+<meta name="description" content="Multi-modal hubs of מנהל התכנון (__MINHAL_SRC__) compared with פרויקט תעדוף מתחמים (the hub prioritization list): in both, only in one of them.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
 <style>
 __LEAFLET_CSS__
@@ -308,7 +356,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   const map = L.map('map', {zoomControl: false, preferCanvas: true});
   L.control.zoom({position: 'topright'}).addTo(map);
   map.attributionControl.setPrefix('');
-  map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · TOD Israel explorer (beta)');
+  map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · מנהל התכנון: __MINHAL_SRC__');
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, className: 'osm-gray'}).addTo(map);
 
   const both = L.layerGroup().addTo(map), onlyx = L.layerGroup().addTo(map), onlym = L.layerGroup().addTo(map);

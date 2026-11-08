@@ -54,11 +54,16 @@ Rebuild the map after a new scrape with
 
 `tod_scraper/compare_hubs.py` matches a hub list (xlsx with x/y in WGS84, e.g. the
 hub prioritization results, `data/input/hub_prioritization_results.xlsx`, currently
-hub_prioritization_results_6: 157 rows, 130 once rows with HubType = Not Hub are dropped) against the map's multi-modal hubs (hub_id set,
-n_modes >= 2) by location, 400 m tolerance by default:
+hub_prioritization_results_6: 157 rows, 130 once rows with HubType = Not Hub are dropped) against
+Minhal's multi-modal hubs by location, 400 m tolerance by default. With `--minhal-gpkg
+../Data/MT_Network.gpkg` a Minhal hub is a `hub_id` of the MT_Network `stations` layer: its
+stops (all lines) grouped, placed at their mean position (`spread_m` is the farthest stop from
+it), named after the most common street in its stop names, and kept when it serves 2 or more
+modes (426 hub_ids, 207 kept). Without the option the scraped stations are used (hub_id set,
+n_modes >= 2).
 
 ```bash
-python compare_hubs.py data/input/hub_prioritization_results.xlsx \
+python compare_hubs.py data/input/hub_prioritization_results.xlsx --minhal-gpkg ../Data/MT_Network.gpkg \
     --leaflet-css <leaflet.css> --copy-map-to ../compare.html
 ```
 
