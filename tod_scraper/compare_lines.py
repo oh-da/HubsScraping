@@ -4,8 +4,10 @@ Compare the transit network of the Hubs project (HubsPrioritizing: csv of node x
 memberships, ITM coordinates) with the lines and stations of Minhal (the TOD Israel map
 of מנהל התכנון scraped by this repository), by geometry only.
 
-The Hubs project file (Data/All_nodes+lines_V1.01.csv) lists, per line id, the model
-nodes the line stops at. It has no route geometry, no stop order and its line names do
+The Hubs project file (Data/Routes_and_Nodes_V1.1_nodes+lines.csv, built from the routes
+workbook by prepare_hubs_lines.py) lists, per line id, the model nodes the line stops at, with
+their ITM coordinates and optionally the planned mode. It has no route geometry, no stop order
+(the row order of the workbook is not the stop order) and its line names do
 not follow Minhal's naming, so nothing here relies on names:
 
 1. offset  - the two sources do not sit exactly on top of each other. A local shift
@@ -13,8 +15,8 @@ not follow Minhal's naming, so nothing here relies on names:
              --shift-radius) is estimated and applied to the Hubs nodes before
              anything else is measured; the raw and corrected distances are both kept.
 2. mode    - the mode of a Hubs line is taken from Minhal: the mode whose Minhal
-             lines run within --tol-line of most of its nodes (the line-name prefix is
-             reported only as a hint).
+             lines run within --tol-line of most of its nodes (the Hubs project's planned
+             mode, or else the line-name prefix, is a hint: reported, and used to break ties).
 3. nodes   - every Hubs node is matched to the nearest Minhal station (<= --tol-station)
              and to the nearest Minhal line of each mode (<= --tol-line).
 4. routing - the nodes of a line are ordered (shortest open path through them) and
@@ -30,7 +32,7 @@ data/out/line_comparison_map.html (an interactive map of all of the above) and
 data/out/line_overlay_map.html (a plain overlay: Hubs lines as their stops joined in
 order over the Minhal lines layer, each layer switchable, with a mode filter).
 
-    python compare_lines.py ../Data/All_nodes+lines_V1.01.csv --leaflet-css leaflet.css \
+    python compare_lines.py ../Data/Routes_and_Nodes_V1.1_nodes+lines.csv --leaflet-css leaflet.css \
         [--tol-station 150] [--tol-line 100] [--min-gap 300] \
         [--copy-map-to ../compare_lines.html] [--copy-overlay-to ../compare_lines_overlay.html]
 """
@@ -55,12 +57,20 @@ from shapely.strtree import STRtree
 
 ITM = "EPSG:2039"
 MODES = ["Metro", "LRT", "BRT", "Rail", "Funicular"]
-# line-name prefix -> mode hint (only reported, never used for matching)
+# line-name prefix -> mode hint (reported, and used only to break a tie of the mode vote)
 HINTS = [(r"^rail", "Rail"), (r"^(brt|BRT|BluRT|RH-GY)", "BRT"), (r"^(lrt|LRT)", "LRT"), (r"_LRT_", "LRT"),
          (r"^(M1|Me0)", "Metro"), (r"^(c0|s0)", "Funicular")]      # m0xxx are Haifa's Metronit (BRT), no hint
 
 
+# planned mode of the Hubs project (optional 'mode' column of the csv) -> Minhal mode
+PLANNED = {"Metro": "Metro", "LRT": "LRT", "BRT": "BRT", "Suburban Rail": "Rail", "Interurban Rail": "Rail",
+           "HighSpeed Rail": "Rail", "Rail": "Rail", "Cable Line": "Funicular", "Funicular": "Funicular"}
+PLANNED_MODE: dict[str, str] = {}                                  # LINE_ID -> Minhal mode, filled by read_hubs
+
+
 def mode_hint(line_id: str) -> str:
+    if line_id in PLANNED_MODE:
+        return PLANNED_MODE[line_id]
     for pat, m in HINTS:
         if re.search(pat, line_id):
             return m
@@ -70,7 +80,8 @@ def mode_hint(line_id: str) -> str:
 # ---------------------------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------------------------
-def read_hubs(path: Path) -> pd.DataFrame:
+def read_hubs(path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """node x line rows with coordinates, and the rows whose node has none."""
     for enc in ("utf-8-sig", "cp1255", "latin-1"):
         try:
             df = pd.read_csv(path, encoding=enc)
@@ -82,10 +93,18 @@ def read_hubs(path: Path) -> pd.DataFrame:
     line = cols.get("line_id") or cols.get("line") or cols.get("lineid")
     x = cols.get("x") or cols.get("x_itm") or cols.get("east")
     y = cols.get("y") or cols.get("y_itm") or cols.get("north")
-    df = df.rename(columns={node: "node", line: "LINE_ID", x: "X", y: "Y"})[["node", "LINE_ID", "X", "Y"]]
+    mode = cols.get("mode") or cols.get("plannedmode")
+    df = df.rename(columns={node: "node", line: "LINE_ID", x: "X", y: "Y"})
+    df["planned_mode"] = df[mode] if mode else None
+    df = df[["node", "LINE_ID", "X", "Y", "planned_mode"]]
     df["LINE_ID"] = df["LINE_ID"].astype(str).str.strip()
-    df = df.dropna(subset=["X", "Y"]).drop_duplicates(["node", "LINE_ID"]).reset_index(drop=True)
-    return df
+    df = df.drop_duplicates(["node", "LINE_ID"])
+    for lid, pm in df.dropna(subset=["planned_mode"]).groupby("LINE_ID")["planned_mode"].first().items():
+        if str(pm).strip() in PLANNED:
+            PLANNED_MODE[lid] = PLANNED[str(pm).strip()]
+    no_xy = df[df["X"].isna() | df["Y"].isna()].reset_index(drop=True)
+    df = df.dropna(subset=["X", "Y"]).reset_index(drop=True)
+    return df, no_xy
 
 
 def local_shift(N: np.ndarray, S: np.ndarray, tol: float, radius: float, min_pairs: int, passes: int = 2):
@@ -251,7 +270,7 @@ def rc(g, nd=5):
 # ---------------------------------------------------------------------------------------------
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("csv", help="Hubs project node x line csv (node, LINE_ID, X, Y in EPSG:2039)")
+    ap.add_argument("csv", help="Hubs project node x line csv (node, LINE_ID, X, Y in EPSG:2039, optional mode)")
     ap.add_argument("--data", default="data")
     ap.add_argument("--tol-station", type=float, default=150, help="Hubs node <-> Minhal station match radius (m, after shift)")
     ap.add_argument("--tol-line", type=float, default=100, help="Hubs node <-> Minhal line radius (m): on the network / mode vote")
@@ -273,7 +292,7 @@ def main() -> int:
     out_dir = data / "out"
 
     # ---- inputs ---------------------------------------------------------------------------------
-    ext = read_hubs(Path(args.csv))
+    ext, no_xy = read_hubs(Path(args.csv))
     nodes = ext.drop_duplicates("node")[["node", "X", "Y"]].reset_index(drop=True)
     nodes["lines"] = nodes["node"].map(ext.groupby("node")["LINE_ID"].agg(list))
     N = nodes[["X", "Y"]].to_numpy(float)
@@ -408,7 +427,7 @@ def main() -> int:
         st_share = n_st / n if n else 0
         stations_status = "all" if st_share == 1 else "most" if st_share >= 0.75 else "some" if st_share >= 0.25 else "few"
         line_rows.append({
-            "LINE_ID": lid, "route_id": r["route_id"], "same_nodes_as": "", "name_mode_hint": hint, "minhal_mode": mode,
+            "LINE_ID": lid, "route_id": r["route_id"], "same_nodes_as": "", "hubs_mode_hint": hint, "minhal_mode": mode,
             "mode_hint_differs": bool(hint and mode and hint != mode), "status": status, "stations_status": stations_status, "n_nodes": n,
             "nodes_with_minhal_station": n_st, "pct_nodes_with_minhal_station": round(100 * n_st / n) if n else None,
             "nodes_on_minhal_line_of_mode": n_on, "pct_nodes_on_minhal_line": round(100 * share) if n else None,
@@ -492,9 +511,15 @@ def main() -> int:
 
     # ---- summary --------------------------------------------------------------------------------
     n_lines, n_nodes = len(lines), len(nodes)
+    no_xy_lines = sorted(set(no_xy["LINE_ID"]) - set(ext["LINE_ID"]))
+    no_xy_out = (no_xy.groupby("node")["LINE_ID"].agg(lambda s: " | ".join(sorted(s))).rename("lines").reset_index()
+                 .assign(lines_still_drawn=lambda d: d["lines"].map(lambda s: " | ".join(l for l in s.split(" | ") if l not in no_xy_lines))))
     summary = pd.DataFrame([
         {"item": "Hubs project lines", "value": n_lines, "note": f"{len(routes)} distinct node sets (both directions of a line share one)"},
         {"item": "Hubs project nodes", "value": n_nodes, "note": Path(args.csv).name},
+        {"item": "Hubs project nodes without coordinates (left out)", "value": int(no_xy["node"].nunique()),
+         "note": f"{len(no_xy)} node x line rows; lines with no located node at all: {len(no_xy_lines)}"
+                 + (f" ({', '.join(no_xy_lines)})" if no_xy_lines else "") + "; sheet 'hubs_nodes_no_xy'"},
         {"item": "Minhal stations / line segments", "value": f"{len(st)} / {len(ln)}", "note": "tod_israel.xlsx 'stations', tod_israel.gpkg 'lines'"},
         {"item": "offset Hubs -> Minhal, global median (m)", "value": f"dx {glob[0]:+.1f}, dy {glob[1]:+.1f}",
          "note": f"shift mode '{args.shift}'; the sheet 'shift' lists it per metropolitan area; applied to the Hubs nodes before matching"},
@@ -508,7 +533,7 @@ def main() -> int:
         {"item": "Hubs lines: missing in Minhal", "value": int((lines["status"] == "missing in Minhal").sum()), "note": "no node on any Minhal line"},
         {"item": "Hubs lines: Minhal stations all / most / some / few", "value": " / ".join(str(int((lines["stations_status"] == s).sum())) for s in ("all", "most", "some", "few")),
          "note": "share of the line's nodes with a Minhal station: 100% / >= 75% / >= 25% / < 25%"},
-        {"item": "Hubs lines whose name hints another mode", "value": int(lines["mode_hint_differs"].sum()), "note": "name prefix vs the mode of the Minhal lines under the nodes"},
+        {"item": "Hubs lines whose Hubs mode differs from Minhal", "value": int(lines["mode_hint_differs"].sum()), "note": "planned mode in the Hubs project (else the name prefix) vs the mode of the Minhal lines under the nodes"},
         {"item": "stop pairs: routing differs / no path / off-network", "value": f"{int((segments['kind'] == 'routing differs').sum())} / {int((segments['kind'] == 'no path').sum())} / {int((segments['kind'] == 'off-network').sum())}" if len(segments) else "0 / 0 / 0",
          "note": f"Minhal route > {args.detour:g} x straight (+{args.detour_min:.0f} m) / not connected / a stop off the Minhal network"},
         {"item": "Minhal stations without a Hubs node", "value": len(only_map_st), "note": f"no Hubs node within {args.tol_station:.0f} m"},
@@ -528,6 +553,7 @@ def main() -> int:
         lines.to_excel(xw, sheet_name="hubs_lines", index=False)
         segments.to_excel(xw, sheet_name="hubs_stop_pairs", index=False)
         nodes_out.to_excel(xw, sheet_name="hubs_nodes", index=False)
+        no_xy_out.to_excel(xw, sheet_name="hubs_nodes_no_xy", index=False)
         only_map_st.to_excel(xw, sheet_name="only_minhal_stations", index=False)
         gaps.drop(columns="geometry").to_excel(xw, sheet_name="only_minhal_lines", index=False)
         coverage.to_excel(xw, sheet_name="minhal_coverage", index=False)
@@ -1011,7 +1037,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 "Heeb
   const counts = {r: 0, d: 0, o: 0};
   const routePopup = (r, s) => `<div class="pp" dir="auto"><span class="st ${stCls(r.status)}">alignment: ${esc(r.status)}</span> <span class="st ${r.sst === 'all' || r.sst === 'most' ? 'st-match' : r.sst === 'some' ? 'st-partial' : 'st-missing'}">stations: ${esc(r.sst)}</span>
       <h2 style="margin-top:6px">${esc(r.lines.join(' / '))}</h2>
-      <dl class="kv"><dt>Minhal mode</dt><dd>${esc(r.mode)}${r.hint && r.hint !== r.mode ? ` <span class="diff">(name hints ${esc(r.hint)})</span>` : ''} · votes ${esc(r.votes)}</dd>
+      <dl class="kv"><dt>Minhal mode</dt><dd>${esc(r.mode)}${r.hint && r.hint !== r.mode ? ` <span class="diff">(Hubs: ${esc(r.hint)})</span>` : ''} · votes ${esc(r.votes)}</dd>
       <dt>nodes</dt><dd>${r.n} · <span class="${r.nst < r.n ? 'diff' : 'same'}">${r.nst} with a Minhal station</span> · ${r.non} on a Minhal ${esc(r.mode)} line</dd>
       <dt>stop pairs</dt><dd>${r.nseg} · ${r.nrt} routed · <span class="${r.ndiff ? 'diff' : ''}">${r.ndiff} routing differ</span> · <span class="${r.noff ? 'bad' : ''}">${r.noff} off network</span></dd>
       ${s ? `<dt>this pair</dt><dd>${esc(kindName[s.k])} · nodes ${esc(s.a)} → ${esc(s.b)} · straight ${fmt(s.s)} m${s.m != null ? ` · Minhal route ${fmt(s.m)} m` : ''}</dd>` : ''}</dl>

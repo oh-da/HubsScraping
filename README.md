@@ -53,7 +53,8 @@ Rebuild the map after a new scrape with
 ## Comparing with an external hub list
 
 `tod_scraper/compare_hubs.py` matches a hub list (xlsx with x/y in WGS84, e.g. the
-hub prioritization results, rows with HubType = Not Hub dropped) against the map's multi-modal hubs (hub_id set,
+hub prioritization results, `data/input/hub_prioritization_results.xlsx`, currently
+hub_prioritization_results_6: 157 rows, 130 once rows with HubType = Not Hub are dropped) against the map's multi-modal hubs (hub_id set,
 n_modes >= 2) by location, 400 m tolerance by default:
 
 ```bash
@@ -70,8 +71,16 @@ one on top of the other with a tie line showing the offset.
 
 Two sources are compared:
 
-* **Hubs project** (HubsPrioritizing): `Data/All_nodes+lines_V1.01.csv`, one row per node x
-  line (`node`, `LINE_ID`, `X`, `Y` in EPSG:2039), no route geometry and no stop order.
+* **Hubs project** (HubsPrioritizing): `Data/Routes_and_Nodes_V1.1.xlsx`, sheet `All`, one row
+  per line x node (`Line`, `Node`, `Include`, `PlannedMode`), no route geometry, no
+  coordinates, and its row order is not the stop order. `tod_scraper/prepare_hubs_lines.py`
+  turns it into `Data/Routes_and_Nodes_V1.1_nodes+lines.csv` (`node`, `LINE_ID`, `mode`, `X`, `Y`
+  in EPSG:2039): lines with `Include = 0` are dropped (a blank `Include` counts as included),
+  and the node coordinates are taken from the earlier `Data/All_nodes+lines_V1.01.csv`. Nodes
+  that file does not have are kept with blank X/Y and reported (sheet `hubs_nodes_no_xy`), not
+  drawn: 229 of the 1,508 nodes in V1.1, which leaves out 18 lines entirely (the Jerusalem
+  metro MTR11-32, BRT11/12, cable car CC_1/2, the Hadera / Or Akiva / Harish BRT lines and
+  Haifa's m2010a/m2020a).
 * **Minhal** (מנהל התכנון): the `lines` and `stations` layers scraped from the TOD Israel map
   by this repository (`tod_israel.gpkg` / `tod_israel.xlsx`).
 
@@ -84,8 +93,8 @@ sources do not correspond and are never compared):
    node to station offset within 10 km) is estimated and applied to the Hubs nodes first;
    raw and corrected distances are both kept.
 2. **mode**: the mode of a Hubs line is the mode whose Minhal lines run under most of its
-   nodes (the name prefix is only reported as a hint, `mode_hint_differs` flags e.g. a
-   "BRT" line that runs on Minhal's LRT).
+   nodes. The Hubs project's `PlannedMode` (else the name prefix) is a hint: it breaks ties
+   and `mode_hint_differs` flags e.g. a planned BRT line that runs on Minhal's LRT.
 3. **nodes**: each Hubs node is matched to the nearest Minhal station (150 m) and Minhal
    line (100 m, Rail 250 m).
 4. **routing**: the stops of each Hubs line are ordered (shortest path through them) and
@@ -96,13 +105,15 @@ sources do not correspond and are never compared):
    Minhal network that no Hubs line uses (parallel carriageways of a used line excluded).
 
 ```bash
-python compare_lines.py ../Data/All_nodes+lines_V1.01.csv \
+python prepare_hubs_lines.py ../Data/Routes_and_Nodes_V1.1.xlsx ../Data/All_nodes+lines_V1.01.csv \
+    -o ../Data/Routes_and_Nodes_V1.1_nodes+lines.csv
+python compare_lines.py ../Data/Routes_and_Nodes_V1.1_nodes+lines.csv \
     --leaflet-css <leaflet.css> --copy-map-to ../compare_lines.html \
     --copy-overlay-to ../compare_lines_overlay.html
 ```
 
 Outputs `data/out/line_comparison.xlsx` (sheets: summary, shift, hubs_lines, hubs_stop_pairs,
-hubs_nodes, only_minhal_stations, only_minhal_lines, minhal_coverage),
+hubs_nodes, hubs_nodes_no_xy, only_minhal_stations, only_minhal_lines, minhal_coverage),
 `data/out/line_comparison.gpkg` (hubs_routes, hubs_stop_pairs, hubs_nodes, hubs_nodes_raw,
 minhal_lines_used, only_minhal_lines, only_minhal_stations; EPSG:2039) and
 `data/out/line_comparison_map.html` (also served at
