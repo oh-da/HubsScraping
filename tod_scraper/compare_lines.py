@@ -4,10 +4,9 @@ Compare the transit network of the Hubs project (HubsPrioritizing: csv of node x
 memberships, ITM coordinates) with the lines and stations of Minhal (the TOD Israel map
 of מנהל התכנון scraped by this repository), by geometry only.
 
-The Hubs project file (Data/Routes_and_Nodes_V1.1_nodes+lines.csv, built from the routes
-workbook by prepare_hubs_lines.py) lists, per line id, the model nodes the line stops at, with
-their ITM coordinates and optionally the planned mode. It has no route geometry, no stop order
-(the row order of the workbook is not the stop order) and its line names do
+The Hubs project file (Data/All_nodes+lines_V1.1.csv) lists, per line id, the model nodes
+the line stops at, with their ITM coordinates (and, optionally, a 'mode' column with the planned
+mode). It has no route geometry, no stop order and its line names do
 not follow Minhal's naming, so nothing here relies on names:
 
 1. offset  - the two sources do not sit exactly on top of each other. A local shift
@@ -32,7 +31,7 @@ data/out/line_comparison_map.html (an interactive map of all of the above) and
 data/out/line_overlay_map.html (a plain overlay: Hubs lines as their stops joined in
 order over the Minhal lines layer, each layer switchable, with a mode filter).
 
-    python compare_lines.py ../Data/Routes_and_Nodes_V1.1_nodes+lines.csv --leaflet-css leaflet.css \
+    python compare_lines.py ../Data/All_nodes+lines_V1.1.csv --leaflet-css leaflet.css \
         [--tol-station 150] [--tol-line 100] [--min-gap 300] \
         [--copy-map-to ../compare_lines.html] [--copy-overlay-to ../compare_lines_overlay.html]
 """
