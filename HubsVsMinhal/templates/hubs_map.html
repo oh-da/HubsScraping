@@ -57,7 +57,7 @@
       <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><circle cx="14" cy="8" r="3.5" fill="var(--minhal)" fill-opacity=".55" stroke="var(--ring)"/></svg>
       <span class="lbl">Minhal: single-mode hubs<small>hub_id with fewer than __MINM__ modes</small></span><span class="cnt" id="cnt-single_mode"></span></label></li>
     <li><label><input type="checkbox" id="x-stops">
-      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><circle cx="9" cy="8" r="2" fill="var(--neutral)"/><circle cx="15" cy="6" r="2" fill="var(--neutral)"/><circle cx="20" cy="10" r="2" fill="var(--neutral)"/></svg>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><circle cx="8" cy="9" r="2.6" fill="var(--stops)" stroke="var(--ring)" stroke-width=".8"/><circle cx="15" cy="5.5" r="2.6" fill="var(--stops)" stroke="var(--ring)" stroke-width=".8"/><circle cx="21" cy="10" r="2.6" fill="var(--stops)" stroke="var(--ring)" stroke-width=".8"/></svg>
       <span class="lbl">Hubs project: other stops<small>stops of the groups that failed eligibility</small></span><span class="cnt" id="cnt-stops"></span></label></li>
   </ul>
 
@@ -83,7 +83,7 @@
   const TIERS = [['ארצי', 'National', 14], ['מטרופוליני', 'Metropolitan', 11], ['עירוני', 'Local', 8]];
   const css = getComputedStyle(document.documentElement), tok = n => css.getPropertyValue(n).trim();
   const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const COL = {both: tok('--both'), hubs: tok('--hubs'), minhal: tok('--minhal'), neutral: tok('--neutral'), ring: tok('--ring')};
+  const COL = {both: tok('--both'), hubs: tok('--hubs'), minhal: tok('--minhal'), neutral: tok('--neutral'), stops: tok('--stops'), ring: tok('--ring')};
   const $ = id => document.getElementById(id), fmt = n => n == null ? '–' : Number(n).toLocaleString();
 
   const map = L.map('map', {zoomControl: false, preferCanvas: true});
@@ -139,7 +139,16 @@
   // ---- marks ------------------------------------------------------------------------------------------
   const marks = [];                                    // {layers, set, tier}
   const put = (layers, set, tier, hub) => { const mk = {layers, set, tier}; marks.push(mk); if (hub) markOf.set(hub, mk); };
-  OTHER.forEach(ll => put([L.circleMarker(ll, {radius: 2, stroke: false, fillColor: COL.neutral, fillOpacity: .8, interactive: false})], 'stops'));
+  const stopPopup = s => `<div class="pp"><span class="tag" style="background:${COL.stops}">Hubs project stop · in no scored group</span>
+    <h2>${esc(s.modes.join(', '))}</h2>
+    <dl class="kv"><dt>node</dt><dd>${s.id}</dd>
+      <dt>${s.lines.length === 1 ? 'line' : 'lines'}</dt><dd>${s.lines.map(l => `<bdi>${esc(l)}</bdi>`).join(', ')}</dd>
+      <dt>line ids</dt><dd>${esc(s.ids.join(', '))} <span class="muted">(one per direction)</span></dd></dl></div>`;
+  OTHER.forEach(s => {
+    const c = L.circleMarker(s.ll, {radius: 3.5, color: COL.ring, weight: .8, fillColor: COL.stops, fillOpacity: .95});
+    c.bindPopup(() => stopPopup(s), {maxWidth: 320}); c.bindTooltip(`${s.modes.join(', ')} stop · ${s.lines.join(', ')}`, {direction: 'top', offset: [0, -3]});
+    put([c], 'stops');
+  });
   MINHAL.filter(m => m.set === 'single_mode').forEach(m => {
     const c = L.circleMarker(m.ll, {radius: 4, color: COL.ring, weight: 1, fillColor: COL.minhal, fillOpacity: .55});
     c.bindPopup(() => minhalPopup(m), {maxWidth: 340}); c.bindTooltip(`${m.name} · Minhal, ${m.modes.join(', ')} only`, {direction: 'top'});

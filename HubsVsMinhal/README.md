@@ -100,7 +100,8 @@ When asking "does the other project have the same mode here", Rail and Rail fast
   hide (marked). Only tiered hubs and multi-mode Minhal hubs decide the three sets.
 * **Candidates.** `hub_scoring_calculation.xlsx` lists all 1,059 groups but has no coordinates and
   no node lists, so the 894 groups that failed eligibility cannot be drawn as groups. The map
-  shows their stops instead (every stop that is in no scored group), and the eligibility rules are
+  shows their stops instead (every stop that is in no scored group, in red; click one for its
+  mode and lines), and the eligibility rules are
   re-run in Python and written to the `eligibility` sheet. The script checks that the re-run
   reproduces the 165 eligible groups and their tiers exactly, and stops if it does not.
 

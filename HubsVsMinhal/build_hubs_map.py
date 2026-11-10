@@ -230,7 +230,17 @@ def main() -> int:
     scored = {n for ns in res["nodes"] for n in ns}
     rest = nodes[~nodes.index.isin(scored)]
     rest_ll = gpd.GeoSeries(gpd.points_from_xy(rest["X"], rest["Y"]), crs=C.ITM).to_crs(C.WGS)
-    other_stops = [[round(p.y, 5), round(p.x, 5)] for p in rest_ll]
+    # what stops there: the node file gives the lines of each stop, the mode table their mode and name
+    line_info = C.read_csv_he(C.HUBS_MODES).drop_duplicates("Line_ModelName").set_index("Line_ModelName")
+    stop_lines = C.read_csv_he(C.HUBS_NODES).groupby("node")["LINE_ID"].agg(lambda s: sorted(set(s)))
+    missing = {l for ls in stop_lines for l in ls} - set(line_info.index)
+    if missing:
+        raise ValueError(f"lines without a row in {C.HUBS_MODES.name}: {sorted(missing)}")
+    uniq = lambda vals: list(dict.fromkeys(vals))
+    other_stops = [{"id": int(n), "ll": [round(p.y, 5), round(p.x, 5)],
+                    "modes": uniq(line_info.loc[stop_lines[n], "Mode_Planned"]),
+                    "lines": uniq(line_info.loc[stop_lines[n], "Line_Name"]), "ids": stop_lines[n]}
+                   for n, p in zip(rest.index, rest_ll)]
     funnel.update(scored_nodes=len(scored), other_nodes=len(rest),
                   tiers={t: int((res["HubType"] == t).sum()) for t in TIERS + ["Not Hub"]})
 
