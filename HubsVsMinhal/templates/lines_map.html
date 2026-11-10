@@ -85,7 +85,7 @@
     <button type="button" data-view="31.25,34.80,12">Be'er Sheva</button>
   </div>
   <p class="links"><a href="hubs_map.html">Hubs map →</a><a href="lines_comparison.xlsx" download>Line-by-line table (xlsx)</a></p>
-  <p class="note">Click the map to list every line of both projects at that point. "Here" means within __TOL__ m; a Minhal rail station matches a Hubs project rail stop within __RAIL_TOL__ m.
+  <p class="note">Click a line to list every line of both projects within __TOL__ m of that point, including lines the filters hide. "Here" means within __TOL__ m; a Minhal rail station matches a Hubs project rail stop within __RAIL_TOL__ m.
     Hubs project lines are one per direction and have no alignment in the data, only stops, so their links cut corners (most of all for rail).
     Rail = Rail + Rail fast count as one family when comparing modes. Basemap: OpenStreetMap.</p>
 </section>
@@ -184,34 +184,55 @@
   $('cnt-cancelled').textContent = nCancelled;
   $('sub').textContent = `${HUBS.length} Hubs project lines (one per direction) · ${new Set(MINHAL.map(f => f.id)).size} Minhal lines in ${MINHAL.length} pieces`;
 
-  // ---- click: list every line of both projects near the point ---------------------------------------
-  const distToSeg = (p, a, b) => {
-    const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy;
-    const t = len2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2)) : 0;
-    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-  };
+  // ---- click a line: list every line of both projects within the comparison tolerance of that point ----
+  // The colour of a stretch is decided at __TOL__ m and without regard to the filters, so the list is too:
+  // otherwise a dashed "different mode" stretch would show nothing for the other project whenever that
+  // other mode is unticked, or its line runs a street away.
+  const TOL = __TOL__, CLICK_PX = 8;
   const share = (f, other) => f.pct[0] == null ? 'rail track is compared by station' :
     `${f.pct[0]}% same mode in ${other} · ${f.pct[1]}% other mode · ${f.pct[2]}% not in ${other}`;
-  const hubsLi = (f, cls) => `<li><bdi class="nm">${esc(f.name)}</bdi> <bdi class="muted">${esc(f.id)}</bdi>
+  const where = hit => `${hit.d < 10 ? 'at the click' : `${Math.round(hit.d)} m away`}${hit.shown ? '' : ' · hidden by the filters'}`;
+  const hubsLi = (f, hit) => `<li><bdi class="nm">${esc(f.name)}</bdi> <bdi class="muted">${esc(f.id)}</bdi> <span class="muted">· ${where(hit)}</span>
     <small>${esc(f.src)} · <bdi>${esc(f.desc)}</bdi> · ${f.stops} stops · ${esc(f.area)}</small>
-    <small>here: ${clsText('hubs', cls)} · whole line: ${share(f, 'Minhal')}</small>${f.inferred ? '<small class="muted">stop order inferred (shortest path through the stops)</small>' : ''}</li>`;
-  const minhalLi = (f, cls) => `<li><bdi class="nm">${esc(f.name)}</bdi> <span class="muted">line_id ${f.id}</span>
+    <small>here: ${clsText('hubs', hit.cls)} · whole line: ${share(f, 'Minhal')}</small>${f.inferred ? '<small class="muted">stop order inferred (shortest path through the stops)</small>' : ''}</li>`;
+  const minhalLi = (f, hit) => `<li><bdi class="nm">${esc(f.name)}</bdi> <span class="muted">line_id ${f.id} · ${where(hit)}</span>
     <small>${esc(f.mode)}${f.alt ? ` · <bdi>${esc(f.alt)}</bdi>` : ''} · opens ${f.year}${f.cancel ? ` · cancelled ${f.cancel}` : ''} · ${esc(f.plan ?? 'no plan stage')}${f.plan_name ? ` (${esc(f.plan_name)})` : ''}</small>
-    <small>here: ${f.active ? clsText('minhal', cls) : `cancelled ${f.cancel}, so Hubs project lines are not compared against it · ${clsText('minhal', cls)}`} · whole piece: ${share(f, 'Hubs project')}</small></li>`;
+    <small>here: ${f.active ? clsText('minhal', hit.cls) : `cancelled ${f.cancel}, so Hubs project lines are not compared against it · ${clsText('minhal', hit.cls)}`} · whole piece: ${share(f, 'Hubs project')}</small></li>`;
+  const distToSeg = (px, py, ax, ay, bx, by) => {
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  };
   map.on('click', e => {
-    const PX = 8, p = map.latLngToLayerPoint(e.latlng), found = {hubs: new Map(), minhal: new Map()};
-    const reach = map.containerPointToLatLng([0, 0]).lat - map.containerPointToLatLng([0, PX]).lat;
+    const c = e.latlng, ky = 110540, kx = 111320 * Math.cos(c.lat * Math.PI / 180);       // metres per degree at the click
+    const cp = map.latLngToContainerPoint(c);
+    const clickM = map.distance(c, map.containerPointToLatLng([cp.x + CLICK_PX, cp.y]));   // the click's own slack, in metres
+    const R = Math.max(TOL, clickM), dLat = R / ky, dLng = R / kx;
+    const found = {hubs: new Map(), minhal: new Map()};
+    let onLine = false;                                  // a popup opens only when a drawn line was clicked
     items.forEach(it => {
-      if (it.kind !== 'line' || !map.hasLayer(it.layer) || found[it.proj].has(it.feat)) return;
+      if (it.kind !== 'line' || (!it.active && !$('p-cancelled').checked)) return;
       const b = it.layer.getBounds();
-      if (e.latlng.lat > b.getNorth() + reach || e.latlng.lat < b.getSouth() - reach || e.latlng.lng < b.getWest() - 2 * reach || e.latlng.lng > b.getEast() + 2 * reach) return;
-      const pts = it.layer.getLatLngs().map(ll => map.latLngToLayerPoint(ll));
-      for (let i = 1; i < pts.length; i++) if (distToSeg(p, pts[i - 1], pts[i]) <= PX) { found[it.proj].set(it.feat, it.cls); break; }
+      if (c.lat > b.getNorth() + dLat || c.lat < b.getSouth() - dLat || c.lng < b.getWest() - dLng || c.lng > b.getEast() + dLng) return;
+      const ll = it.layer.getLatLngs();
+      let d = Infinity;
+      for (let i = 1; i < ll.length; i++)
+        d = Math.min(d, distToSeg(0, 0, (ll[i - 1].lng - c.lng) * kx, (ll[i - 1].lat - c.lat) * ky, (ll[i].lng - c.lng) * kx, (ll[i].lat - c.lat) * ky));
+      if (d > R) return;
+      const shown = map.hasLayer(it.layer), hit = found[it.proj].get(it.feat);
+      if (shown && d <= clickM) onLine = true;
+      if (!hit) found[it.proj].set(it.feat, {d, cls: it.cls, shown});
+      else { if (d < hit.d) { hit.d = d; hit.cls = it.cls; } hit.shown = hit.shown || shown; }      // a line is several stretches: keep the nearest
     });
-    if (!found.hubs.size && !found.minhal.size) return;
-    const section = (title, m, li) => `<h3>${title} · ${m.size} line${m.size === 1 ? '' : 's'}</h3>` +
-      (m.size ? `<ul>${[...m].slice(0, 14).map(([f, cls]) => li(f, cls)).join('')}</ul>${m.size > 14 ? `<p class="muted">+ ${m.size - 14} more</p>` : ''}` : '<p class="muted">none here</p>');
-    L.popup({maxWidth: 380}).setLatLng(e.latlng)
+    if (!onLine) return;
+    const within = `within ${Math.round(R)} m`;
+    const section = (title, m, li) => {
+      const rows = [...m].sort((a, b) => a[1].d - b[1].d);
+      return `<h3>${title} · ${m.size} line${m.size === 1 ? '' : 's'} ${within}</h3>` +
+        (m.size ? `<ul>${rows.slice(0, 14).map(([f, hit]) => li(f, hit)).join('')}</ul>${m.size > 14 ? `<p class="muted">+ ${m.size - 14} more</p>` : ''}`
+                : `<p class="muted">none ${within} of this point</p>`);
+    };
+    L.popup({maxWidth: 380}).setLatLng(c)
       .setContent(`<div class="pp">${section('Hubs project', found.hubs, hubsLi)}${section('Minhal', found.minhal, minhalLi)}</div>`).openOn(map);
   });
 

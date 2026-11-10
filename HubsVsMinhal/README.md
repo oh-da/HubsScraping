@@ -77,6 +77,10 @@ When asking "does the other project have the same mode here", Rail and Rail fast
 * **Heavy rail on the Minhal side is compared by station.** Hubs rail services skip stations, so
   their links say nothing about the track in between. Minhal rail alignments are drawn in grey,
   unclassed, and each Minhal rail station is matched to the nearest Hubs rail stop (500 m).
+* **Clicking a line** lists every line of both projects within 200 m of the clicked point, with
+  its distance. The list ignores the mode and class filters (a line they hide is marked), because
+  the colour of a stretch is decided without them: a dashed "different mode" stretch is explained
+  by a line of another mode, often on a parallel street.
 * **Cancelled lines.** As elsewhere in this repository, Minhal lines with a `year_cancel` (20
   pieces) are left out of the Minhal network. Here they are a separate layer, off by default, and
   Hubs project lines are not compared against them.
