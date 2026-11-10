@@ -134,6 +134,13 @@ For a plain visual check there is also `data/out/line_overlay_map.html`
 (https://oh-da.github.io/HubsScraping/compare_lines_overlay.html): the Hubs lines (stops
 joined in order) over the Minhal lines layer, each layer switchable on and off, a mode
 filter, a line picker, and a toggle that shifts the Hubs lines by the estimated offset.
+## Hubs vs Minhal
+
+`HubsVsMinhal/` compares the Hubs prioritisation project with the Minhal project (`MT_Network.gpkg`)
+on two maps, one for the lines and one for the hubs; see [`HubsVsMinhal/README.md`](HubsVsMinhal/README.md).
+
+* lines: https://oh-da.github.io/HubsScraping/HubsVsMinhal/lines_map.html
+* hubs: https://oh-da.github.io/HubsScraping/HubsVsMinhal/hubs_map.html
 
 ## Quick start
 

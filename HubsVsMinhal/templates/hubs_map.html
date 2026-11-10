@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hubs: Hubs project vs Minhal</title>
+<meta name="description" content="The hubs ranked by the Hubs project next to the hubs of the Minhal project: found by both, only by Hubs project, only by Minhal.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<style>
+/*__BASE_CSS__*/
+.crit { display: grid; grid-template-columns: auto 70px auto; gap: 3px 8px; align-items: center; font-size: 12px; margin: 6px 0 0; }
+.crit .t { color: var(--ink-3); }
+.crit .b { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--ink-3) 22%, transparent); overflow: hidden; }
+.crit .b i { display: block; height: 100%; background: var(--ink-2); border-radius: 3px; }
+.crit .v { font-variant-numeric: tabular-nums; text-align: right; }
+.funnel { margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--ink-2); display: grid; gap: 2px; }
+.funnel b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.funnel small { color: var(--ink-3); }
+.rank { background: none; border: 0; box-shadow: none; padding: 0; font: 600 10.5px/1 "Heebo", system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff; }
+.rank::before { display: none; }
+</style>
+</head>
+<body>
+<div id="map" role="application" aria-label="Map comparing the hubs of the Hubs project with the hubs of the Minhal project"></div>
+
+<section class="panel" id="panel" aria-label="Sets and legend">
+  <header>
+    <h1>Hubs: Hubs project vs Minhal</h1>
+    <button type="button" class="btn" id="btn-collapse" aria-expanded="true" aria-controls="panel">Hide</button>
+  </header>
+  <p class="sub" id="sub"></p>
+
+  <p class="eyebrow">Found by</p>
+  <ul class="sets">
+    <li><label><input type="checkbox" id="s-both" checked>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><line x1="8" y1="8" x2="20" y2="8" stroke="var(--both)" stroke-width="1.5"/><circle cx="8" cy="8" r="5.5" fill="var(--both)" stroke="var(--ring)" stroke-width="1.5"/><circle cx="20" cy="8" r="6" fill="none" stroke="var(--both)" stroke-width="2.2"/></svg>
+      <span class="lbl">Both<small>filled = Minhal · ring = Hubs project · line = pair</small></span><span class="cnt" id="cnt-both"></span></label></li>
+    <li><label><input type="checkbox" id="s-only_hubs" checked>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><circle cx="14" cy="8" r="6.5" fill="var(--hubs)" fill-opacity=".18" stroke="var(--hubs)" stroke-width="2.4"/></svg>
+      <span class="lbl">Only Hubs project<small>no Minhal hub within __TOL__ m</small></span><span class="cnt" id="cnt-only_hubs"></span></label></li>
+    <li><label><input type="checkbox" id="s-only_minhal" checked>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><circle cx="14" cy="8" r="6" fill="var(--minhal)" stroke="var(--ring)" stroke-width="1.5"/></svg>
+      <span class="lbl">Only Minhal<small>no Hubs project hub within __TOL__ m</small></span><span class="cnt" id="cnt-only_minhal"></span></label></li>
+  </ul>
+
+  <p class="eyebrow">Tier in the Hubs project <span style="text-transform:none;letter-spacing:0">· ring size, number = overall rank</span></p>
+  <ul class="sets" id="tiers"></ul>
+
+  <p class="eyebrow">Left out of the comparison</p>
+  <ul class="sets">
+    <li><label><input type="checkbox" id="x-not_hub">
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><circle cx="14" cy="8" r="4.5" fill="none" stroke="var(--hubs)" stroke-width="1.8" stroke-dasharray="2.5 2.5"/></svg>
+      <span class="lbl">Hubs project: scored, tier "Not Hub"<small>eligible, but no tier rule met</small></span><span class="cnt" id="cnt-not_hub"></span></label></li>
+    <li><label><input type="checkbox" id="x-single_mode">
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><circle cx="14" cy="8" r="3.5" fill="var(--minhal)" fill-opacity=".55" stroke="var(--ring)"/></svg>
+      <span class="lbl">Minhal: single-mode hubs<small>hub_id with fewer than __MINM__ modes</small></span><span class="cnt" id="cnt-single_mode"></span></label></li>
+    <li><label><input type="checkbox" id="x-stops">
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><circle cx="9" cy="8" r="2" fill="var(--neutral)"/><circle cx="15" cy="6" r="2" fill="var(--neutral)"/><circle cx="20" cy="10" r="2" fill="var(--neutral)"/></svg>
+      <span class="lbl">Hubs project: other stops<small>stops of the groups that failed eligibility</small></span><span class="cnt" id="cnt-stops"></span></label></li>
+  </ul>
+
+  <p class="eyebrow">Hubs project funnel</p>
+  <ul class="funnel" id="funnel"></ul>
+
+  <div class="actions">
+    <button type="button" id="btn-fit">All</button>
+    <button type="button" data-view="32.08,34.82,12">Tel Aviv</button>
+    <button type="button" data-view="32.80,35.02,12">Haifa</button>
+    <button type="button" data-view="31.78,35.21,12">Jerusalem</button>
+    <button type="button" data-view="31.25,34.80,12">Be'er Sheva</button>
+  </div>
+  <p class="links"><a href="lines_map.html">Lines map →</a><a href="hubs_comparison.xlsx" download>Hub-by-hub table (xlsx)</a></p>
+  <p class="note">Two hubs are the same place when a stop of the Hubs project hub is within __TOL__ m of a station of the Minhal hub; modes are not part of the match, the popup says whether they agree.
+    A Minhal hub is a set of stations sharing a hub_id, compared when it has __MINM__ or more modes. Basemap: OpenStreetMap.</p>
+</section>
+
+<script src="vendor/leaflet.js"></script>
+<script>
+(function () {
+  const HUBS = __HUBS__, MINHAL = __MINHAL__, PAIRS = __PAIRS__, OTHER = __OTHER_STOPS__, FUNNEL = __FUNNEL__, CRITERIA = __CRITERIA__;
+  const TIERS = [['ארצי', 'National', 14], ['מטרופוליני', 'Metropolitan', 11], ['עירוני', 'Local', 8]];
+  const css = getComputedStyle(document.documentElement), tok = n => css.getPropertyValue(n).trim();
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const COL = {both: tok('--both'), hubs: tok('--hubs'), minhal: tok('--minhal'), neutral: tok('--neutral'), ring: tok('--ring')};
+  const $ = id => document.getElementById(id), fmt = n => n == null ? '–' : Number(n).toLocaleString();
+
+  const map = L.map('map', {zoomControl: false, preferCanvas: true});
+  L.control.zoom({position: 'topright'}).addTo(map);
+  map.attributionControl.setPrefix('');
+  map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors');
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, className: 'osm-gray'}).addTo(map);
+
+  const hubById = new Map(HUBS.map(h => [h.g, h])), minhalById = new Map(MINHAL.map(m => [m.id, m]));
+  HUBS.forEach(h => h.pairs = []); MINHAL.forEach(m => m.pairs = []);
+  PAIRS.forEach(p => { hubById.get(p.group).pairs.push(p); minhalById.get(p.hub_id).pairs.push(p); });
+  const radius = h => (TIERS.find(t => t[0] === h.tier) || [0, 0, 6])[2];
+  const setTag = {both: ['Found by both', COL.both], only_hubs: ['Only Hubs project', COL.hubs], only_minhal: ['Only Minhal', COL.minhal],
+                  not_hub: ['Hubs project · scored, tier Not Hub', COL.hubs], single_mode: ['Minhal · single-mode hub', COL.minhal]};
+  const tag = s => `<span class="tag" style="background:${setTag[s][1]}">${setTag[s][0]}</span>`;
+  const sameModes = (a, b) => a.length === b.length && a.every(m => b.includes(m));
+
+  const hubsPopup = h => {
+    const mine = h.pairs.map(p => ({m: minhalById.get(p.hub_id), d: p.dist_m})).sort((a, b) => a.d - b.d);
+    const there = mine.length
+      ? `<h3>Minhal here</h3><ul>${mine.map(({m, d}) => `<li><bdi class="nm">${esc(m.name)}</bdi> <span class="muted">hub_id ${m.id} · ${d} m</span>
+          <small>${esc(m.modes.join(', '))} · ${sameModes(m.modes, h.modes) ? 'same modes' : 'modes differ'}</small></li>`).join('')}</ul>`
+      : `<h3>Minhal here</h3><p class="muted">${h.single ? 'Only a single-mode Minhal hub within __TOL__ m. ' : ''}Nearest multi-mode hub: <bdi>${esc(h.near)}</bdi>, ${fmt(h.d)} m.</p>`;
+    return `<div class="pp">${tag(h.set)}<h2 dir="auto">${esc(h.name)}</h2>
+      <dl class="kv"><dt>tier</dt><dd><bdi>${esc(h.tier)}</bdi>${h.tier_en !== h.tier ? ` · ${h.tier_en}` : ''}</dd>
+        <dt>rank</dt><dd>${h.rank} of ${HUBS.length} scored · ${h.rank_tier} in tier · ${h.rank_tier_metro} in tier and metro</dd>
+        <dt>score</dt><dd>${h.score}</dd><dt>passengers / day</dt><dd>${fmt(h.pax)} (2050)</dd>
+        <dt>modes</dt><dd>${esc(h.modes_src.join(', '))}</dd><dt>lines</dt><dd>${h.lines} (per direction)</dd>
+        <dt>area</dt><dd><bdi>${esc(h.metro)}</bdi> · <bdi>${esc(h.pos)}</bdi></dd><dt>group</dt><dd>${h.g}</dd></dl>
+      <h3>Criteria, 1–10 within the tier</h3>
+      <div class="crit">${CRITERIA.map((c, i) => `<span class="t">${c}</span><span class="b"><i style="width:${10 * (h.crit[i] ?? 0)}%"></i></span><span class="v">${h.crit[i] ?? '–'}</span>`).join('')}</div>
+      ${there}</div>`;
+  };
+  const minhalPopup = m => {
+    const mine = m.pairs.map(p => ({h: hubById.get(p.group), d: p.dist_m})).sort((a, b) => a.h.rank - b.h.rank);
+    const there = mine.length
+      ? `<h3>Hubs project here</h3><ul>${mine.map(({h, d}) => `<li><bdi class="nm">${esc(h.name)}</bdi> <span class="muted">rank ${h.rank} · ${d} m</span>
+          <small><bdi>${esc(h.tier)}</bdi> · ${esc(h.modes.join(', '))} · ${sameModes(m.modes, h.modes) ? 'same modes' : 'modes differ'}</small></li>`).join('')}</ul>`
+      : `<h3>Hubs project here</h3><p class="muted">${m.not_hub ? 'Only a scored "Not Hub" group within __TOL__ m. ' : ''}Nearest Hubs project hub: <bdi>${esc(m.near)}</bdi>, ${fmt(m.d)} m.</p>`;
+    return `<div class="pp">${tag(m.set)}<h2 dir="auto">${esc(m.name)}</h2>
+      <dl class="kv"><dt>hub_id</dt><dd>${m.id}${m.rail_hub ? ' · rail hub' : ''}</dd><dt>modes</dt><dd>${esc(m.modes.join(', '))}</dd>
+        <dt>stations</dt><dd>${m.stations} on ${m.lines} lines</dd>
+        ${m.line_names.length ? `<dt>named lines</dt><dd>${esc(m.line_names.join(', '))}</dd>` : ''}
+        <dt>opens</dt><dd>${m.y0 === m.y1 ? m.y0 : `${m.y0}–${m.y1}`}</dd></dl>${there}</div>`;
+  };
+
+  // ---- marks ------------------------------------------------------------------------------------------
+  const marks = [];                                    // {layers, set, tier}
+  const put = (layers, set, tier) => marks.push({layers, set, tier});
+  OTHER.forEach(ll => put([L.circleMarker(ll, {radius: 2, stroke: false, fillColor: COL.neutral, fillOpacity: .8, interactive: false})], 'stops'));
+  MINHAL.filter(m => m.set === 'single_mode').forEach(m => {
+    const c = L.circleMarker(m.ll, {radius: 4, color: COL.ring, weight: 1, fillColor: COL.minhal, fillOpacity: .55});
+    c.bindPopup(() => minhalPopup(m), {maxWidth: 340}); c.bindTooltip(`${m.name} · Minhal, ${m.modes.join(', ')} only`, {direction: 'top'});
+    put([c], 'single_mode');
+  });
+  PAIRS.forEach(p => { const h = hubById.get(p.group), m = minhalById.get(p.hub_id);
+    put([L.polyline([h.ll, m.ll], {color: COL.both, weight: 1.5, opacity: .9, interactive: false})], 'both', h.tier); });
+  MINHAL.filter(m => m.set === 'both' || m.set === 'only_minhal').forEach(m => {
+    const c = L.circleMarker(m.ll, {radius: 7, color: COL.ring, weight: 1.5, fillColor: m.set === 'both' ? COL.both : COL.minhal, fillOpacity: .95});
+    c.bindPopup(() => minhalPopup(m), {maxWidth: 340}); c.bindTooltip(`${m.name} · Minhal hub ${m.id}`, {direction: 'top', offset: [0, -7]});
+    put([c], m.set, m.set === 'both' ? m.pairs.map(p => hubById.get(p.group).tier) : null);
+  });
+  HUBS.forEach(h => {
+    const hub = h.set !== 'not_hub', r = radius(h), col = h.set === 'both' ? COL.both : COL.hubs;
+    const c = L.circleMarker(h.ll, hub ? {radius: r, color: col, weight: 2.4, fillColor: col, fillOpacity: h.set === 'both' ? 0 : .15}
+                                       : {radius: r, color: col, weight: 1.8, dashArray: '3 3', fillOpacity: 0});
+    c.bindPopup(() => hubsPopup(h), {maxWidth: 360});
+    c.bindTooltip(`#${h.rank} ${h.name} · ${h.tier}`, {direction: 'top', offset: [0, -r]});
+    const layers = [c];
+    if (hub) layers.push(L.tooltip({permanent: true, direction: 'center', className: 'rank', interactive: false, opacity: 1}).setLatLng(h.ll).setContent(String(h.rank)));
+    put(layers, h.set, h.tier);
+  });
+
+  // ---- filters ------------------------------------------------------------------------------------------
+  $('tiers').innerHTML = TIERS.map(([he, en, r]) => `<li><label><input type="checkbox" data-tier="${he}" checked>
+    <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><circle cx="14" cy="8" r="${r / 2}" fill="none" stroke="var(--ink)" stroke-width="1.8"/></svg>
+    <span class="lbl"><bdi>${he}</bdi><small>${en}</small></span><span class="cnt">${FUNNEL.tiers[he]}</span></label></li>`).join('');
+  const tierOn = t => document.querySelector(`#tiers input[data-tier="${t}"]`).checked;
+  const LABEL_ZOOM = 12, STOP_ZOOM = 11;
+  const visible = mk => {
+    if (mk.set === 'stops') return $('x-stops').checked && map.getZoom() >= STOP_ZOOM;
+    if (mk.set === 'not_hub' || mk.set === 'single_mode') return $('x-' + mk.set).checked;
+    if (!$('s-' + mk.set).checked) return false;
+    if (Array.isArray(mk.tier)) return mk.tier.some(tierOn);       // a Minhal hub shows while any of its Hubs project partners does
+    return mk.tier == null || tierOn(mk.tier);
+  };
+  const refresh = () => marks.forEach(mk => {
+    const on = visible(mk);
+    mk.layers.forEach((l, i) => {
+      const want = on && (i === 0 || map.getZoom() >= LABEL_ZOOM), has = map.hasLayer(l);   // layer 1 is the rank label
+      if (want && !has) l.addTo(map); else if (!want && has) map.removeLayer(l);
+    });
+  });
+  document.querySelectorAll('.panel input[type=checkbox]').forEach(cb => cb.addEventListener('change', refresh));
+  map.on('zoomend', refresh);
+
+  const n = (arr, s) => arr.filter(x => x.set === s).length;
+  $('cnt-both').textContent = `${n(HUBS, 'both')} · ${n(MINHAL, 'both')}`;
+  $('cnt-both').title = `${n(HUBS, 'both')} Hubs project hubs paired with ${n(MINHAL, 'both')} Minhal hubs (${PAIRS.length} pairs)`;
+  $('cnt-only_hubs').textContent = n(HUBS, 'only_hubs');
+  $('cnt-only_minhal').textContent = n(MINHAL, 'only_minhal');
+  $('cnt-not_hub').textContent = n(HUBS, 'not_hub');
+  $('cnt-single_mode').textContent = n(MINHAL, 'single_mode');
+  $('cnt-stops').textContent = fmt(OTHER.length);
+  const nHubs = HUBS.length - n(HUBS, 'not_hub'), nMinhal = MINHAL.length - n(MINHAL, 'single_mode');
+  $('sub').textContent = `${nHubs} Hubs project hubs vs ${nMinhal} Minhal hubs (__MINM__+ modes) · same place = within __TOL__ m`;
+  $('funnel').innerHTML = `<li><b>${fmt(FUNNEL.groups)}</b> candidate groups</li>
+    <li><b>${FUNNEL.eligible}</b> eligible and scored <small>· out: ${FUNNEL.few_modes} under ${FUNNEL.min_modes} modes, ${FUNNEL.rail_only} rail-only, ${FUNNEL.few_pax} under ${fmt(FUNNEL.min_pax)} passengers/day</small></li>
+    <li><b>${nHubs}</b> hubs with a tier <small>· ${FUNNEL.tiers['Not Hub']} "Not Hub"</small></li>
+    <li><small>Only the ${FUNNEL.eligible} scored groups have coordinates in the results, so the rest cannot be drawn as groups.</small></li>`;
+
+  const bounds = L.latLngBounds([...HUBS.map(h => h.ll), ...MINHAL.map(m => m.ll)]);
+  $('btn-fit').addEventListener('click', () => map.fitBounds(bounds, {padding: [30, 30]}));
+  document.querySelectorAll('button[data-view]').forEach(b => b.addEventListener('click', () => { const [la, lo, z] = b.dataset.view.split(',').map(Number); map.setView([la, lo], z); }));
+  const panel = $('panel');
+  $('btn-collapse').addEventListener('click', e => { const c = panel.classList.toggle('collapsed'); e.target.textContent = c ? 'Show' : 'Hide'; e.target.setAttribute('aria-expanded', String(!c)); });
+  L.DomEvent.disableClickPropagation(panel); L.DomEvent.disableScrollPropagation(panel);
+  map.setView([32.08, 34.85], 11);
+  refresh();
+})();
+</script>
+</body>
+</html>

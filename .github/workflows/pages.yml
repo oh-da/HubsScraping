@@ -10,6 +10,7 @@ on:
       - "tod_scraper/data/out/line_comparison_map.html"
       - "tod_scraper/data/out/line_comparison.xlsx"
       - "tod_scraper/data/out/line_overlay_map.html"
+      - "HubsVsMinhal/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -41,6 +42,9 @@ jobs:
           cp tod_scraper/data/out/line_comparison_map.html site/compare_lines.html
           cp tod_scraper/data/out/line_comparison.xlsx site/line_comparison.xlsx
           cp tod_scraper/data/out/line_overlay_map.html site/compare_lines_overlay.html
+          mkdir -p site/HubsVsMinhal
+          cp HubsVsMinhal/*.html HubsVsMinhal/*.xlsx site/HubsVsMinhal/
+          cp -r HubsVsMinhal/vendor site/HubsVsMinhal/vendor
           touch site/.nojekyll
 
       - name: Configure Pages

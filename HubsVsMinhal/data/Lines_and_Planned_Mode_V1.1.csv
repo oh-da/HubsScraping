@@ -1,0 +1,271 @@
+Line_ModelName,Mode_Planned,Line_Name,Line_Description,Area
+c001,Cable Line,רכבלית,לב המפרץ-אוניברסיטת חיפה,Haifa
+c002,Cable Line,רכבלית,אוניברסיטת חיפה-לב המפרץ,Haifa
+m0110a,BRT,מטרונית 1,חוף הכרמל - מרכזית הקריות,Haifa
+m0120a,BRT,מטרונית 1,מרכזית הקריות - חוף הכרמל,Haifa
+m0210a,BRT,מטרונית 2,מרכזית בת גלים - קרית אתא,Haifa
+m0220a,BRT,מטרונית 2,קרית אתא - מרכזית בת גלים,Haifa
+m0310a,BRT,מטרונית 3,מרכזית הקריות - הדר,Haifa
+m0320a,BRT,מטרונית 3,הדר - מרכזית הקריות,Haifa
+m0410a,BRT,מטרונית 4,חוף הכרמל (דרך המנהרות) - מרכזית הקריות,Haifa
+m0430a,BRT,מטרונית 4,מרכזית הקריות - חוף הכרמל (דרך המנהרות),Haifa
+m0510a,BRT,מטרונית 5,הדר-יגור,Haifa
+m0520a,BRT,מטרונית 5,יגור-הדר,Haifa
+m0610a,BRT,מטרונית 6,יגור-טירת כרמל,Haifa
+m0620a,BRT,מטרונית 6,טירת כרמל-יגור,Haifa
+m0710a,BRT,מטרונית 7,נאות פרס-מרכזית המפרץ,Haifa
+m0720a,BRT,מטרונית 7,מרכזית המפרץ-נאות פרס,Haifa
+m0810a,BRT,מטרונית 8,עכו-הדר,Haifa
+m0820a,BRT,מטרונית 8,הדר-עכו,Haifa
+m0910a,BRT,מטרונית 9,טכניון-בת גלים,Haifa
+m0920a,BRT,מטרונית 9,בת גלים-טכניון,Haifa
+lrt01,LRT,"רק""ל נופית",נצרת-מרכזית המפרץ,Haifa
+lrt02,LRT,"רק""ל נופית",מרכזית המפרץ-נצרת,Haifa
+lrt03,LRT,"רק""ל נופית",נצרת-חוף הכרמל,Haifa
+lrt04,LRT,"רק""ל נופית",חוף הכרמל-נצרת,Haifa
+lrt05,LRT,"רק""ל נופית",נצרת-אחיהוד,Haifa
+lrt06,LRT,"רק""ל נופית",אחיהוד-נצרת,Haifa
+lrt07,LRT,"רק""ל",חוף הכרמל (דרך 22)-מרכזית הקריות,Haifa
+lrt08,LRT,"רק""ל",מרכזית הקריות-חוף הכרמל (דרך 22),Haifa
+s0110a,Funicular,כרמלית,כיכר פריז-מרכז הכרמל,Haifa
+s0120a,Funicular,כרמלית,מרכז הכרמל-כיכר פריז,Haifa
+brt011,BRT,BRT 1,דיר חנא-גילעם,Haifa
+brt012,BRT,BRT 1,גילעם-דיר חנא,Haifa
+brt021,BRT,BRT 2,דיר חנא-כרמיאל,Haifa
+brt022,BRT,BRT 2,כרמיאל-דיר חנא,Haifa
+brt031,BRT,BRT 3,כפר ברוך-נצרת,Haifa
+brt032,BRT,BRT 3,נצרת-כפר ברוך,Haifa
+brt041,BRT,BRT 4,עפולה-נצרת,Haifa
+brt042,BRT,BRT 4,נצרת-עפולה,Haifa
+brt051,BRT,BRT 5,חדרה-באקה אל גרבייה,Haifa
+brt052,BRT,BRT 5,באקה אל גרבייה-חדרה,Haifa
+brt061,BRT,BRT 6,אור עקיבא-חדרה,Haifa
+brt062,BRT,BRT 6,חדרה-אור עקיבא,Haifa
+Yellow_N,LRT,צהוב,יבנה מערב-רחובות (צהוב),Ashdod-ashkelon
+Yellow_S,LRT,צהוב,רחובות-יבנה מערב (צהוב),Ashdod-ashkelon
+GreenN2,LRT,ירוק,אשדוד-רחובו,Ashdod-ashkelon
+GreenS2,LRT,ירוק,רחובות-אשדוד,Ashdod-ashkelon
+BRT_Blue_E,BRT,כחול,אשקלון-קרית גת (כחול),Ashdod-ashkelon
+BRT_Blue_W,BRT,כחול,קרית גת-אשקלון (כחול),Ashdod-ashkelon
+Orange_N,LRT,כתום,אשקלון-אשדוד (כתום),Ashdod-ashkelon
+Orange_S,LRT,כתום,אשדוד-אשקלון (כתום),Ashdod-ashkelon
+RedN,LRT,אדום,אשקלון-אשדוד (אדום),Ashdod-ashkelon
+RedS,LRT,אדום,אשדוד-אשקלון (אדום),Ashdod-ashkelon
+Yelw-N,BRT,קו צהוב,רצועת הנופש-צומת חולון,Tel Aviv
+Yelw-S,BRT,קו צהוב,צומת חולון-רצועת הנופש,Tel Aviv
+BBEld1,BRT,"אלעד-פ""ת","אלעד-פ""ת",Tel Aviv
+BBEld2,BRT,"אלעד-פ""ת","פ""ת-אלעד",Tel Aviv
+RG-RH1,BRT,"כפר קאסם-ר""ג","כפר קאסם-ר""ג",Tel Aviv
+RH-RG1,BRT,"כפר קאסם-ר""ג","ר""ג-כפר קאסם",Tel Aviv
+RG-RH2,BRT,ראש העין-רמת גן,ראש העין-רמת גן,Tel Aviv
+RH-RG2,BRT,ראש העין-רמת גן,רמת גן-ראש העין,Tel Aviv
+BRT-1,BRT,"אריאל-כפר קאסם-פ""ת","כפר קאסם-פ""ת",Tel Aviv
+BRT-2,BRT,"אריאל-כפר קאסם-פ""ת","פ""ת-כפר קאסם",Tel Aviv
+Red-N,LRT,קו אדום 1,"ראשל""צ-פ""ת",Tel Aviv
+Red-S,LRT,קו אדום 1,"פ""ת-ראשל""צ",Tel Aviv
+Red2-N,LRT,קו אדום 2,"ראשל""צ-פ""ת (קרית אריה)",Tel Aviv
+Red2-S,LRT,קו אדום 2,"פ""ת (קרית אריה)-ראשל""צ",Tel Aviv
+Shut-N,LRT,קו אדום 3,"ת""א-פ""ת",Tel Aviv
+Shut-S,LRT,קו אדום 3,"פ""ת-ת""א",Tel Aviv
+Grn1-N,LRT,קו ירוק 1,"ראשל""צ-עתידים",Tel Aviv
+Grn1-S,LRT,קו ירוק 1,"עתידים-ראשל""צ",Tel Aviv
+Grn2-N,LRT,קו ירוק 2,חולון-הרצליה,Tel Aviv
+Grn2-S,LRT,קו ירוק 2,הרצליה-חולון,Tel Aviv
+Grn3-N,LRT,קו ירוק 3,"חולון-אונ' ת""א",Tel Aviv
+Grn3-S,LRT,קו ירוק 3,"אונ' ת""א-חולון",Tel Aviv
+Mgt1-E,LRT,קו סגול 1,בר אילן-סבידור,Tel Aviv
+Mgt1-W,LRT,קו סגול 1,סבידור-בר אילן,Tel Aviv
+Mgt2-E,LRT,קו סגול 2,יהוד-סבידור,Tel Aviv
+Mgt2-W,LRT,קו סגול 2,סבידור-יהוד,Tel Aviv
+Mgt3-E,LRT,קו סגול 3,יהוד-אלנבי,Tel Aviv
+Mgt3-W,LRT,קו סגול 3,אלנבי-יהוד,Tel Aviv
+BlueRT1,BRT,קו כחול,צומת בילו-צומת חולון,Tel Aviv
+BlueRT2,BRT,קו כחול,צומת חולון-צומת בילו,Tel Aviv
+East-N,LRT,"רק""ל מזרחי",צומת רעננה-צומת בילו,Tel Aviv
+East-S,LRT,"רק""ל מזרחי",צומת בילו-צומת רעננה,Tel Aviv
+ART1-1,LRT,קו חום מערבי,מתחם ה-1000-אסף הרופא,Tel Aviv
+ART1-2,LRT,קו חום מערבי,אסף הרופא-מתחם ה-1000,Tel Aviv
+ART2-1,LRT,קו חום מערבי 2,"חוף ראשל""צ-אסף הרופא",Tel Aviv
+ART2-2,LRT,קו חום מערבי 2,"אסף הרופא-חוף ראשל""צ",Tel Aviv
+BRT1-1,BRT,קו חום מזרחי,"תחנה מרכזית ראשל""צ-לוד",Tel Aviv
+BRT1-2,BRT,קו חום מזרחי,"לוד-תחנה מרכזית ראשל""צ",Tel Aviv
+BRT2-1,BRT,קו חום מזרחי 2,אסף הרופא-אירפורט סיטי,Tel Aviv
+BRT2-2,BRT,קו חום מזרחי 2,אירפורט סיטי-אסף הרופא,Tel Aviv
+Me02-E,Metro,מטרו 2,וולפסון-סגולה,Tel Aviv
+Me02-W,Metro,מטרו 2,סגולה-וולפסון,Tel Aviv
+Me03-L,Metro,מטרו 3 טבעתי,הרצליה-בת ים,Tel Aviv
+Me03-R,Metro,מטרו 3 טבעתי,בת ים-הרצליה,Tel Aviv
+Hz-KS1,BRT,קו ורוד,כפר סבא-הרצליה,Tel Aviv
+Hz-KS2,BRT,קו ורוד,הרצליה-כפר סבא,Tel Aviv
+LRT121,LRT,קו כחול 1,נתניה מערב-הרצליה,Netanya
+LRT122,LRT,קו כחול 1,הרצליה-נתניה מערב,Netanya
+LRT131,LRT,קו כחול 2,נתניה מזרח-הרצליה,Netanya
+LRT132,LRT,קו כחול 2,הרצליה-נתניה מזרח,Netanya
+LRT141,BRT,"נתניה-כפ""ס","נתניה-כפ""ס דרך טייבה/קלאנסווה",Netanya
+LRT142,LRT,"נתניה-כפ""ס","כפ""ס-נתניה דרך טייבה/קלאנסווה",Netanya
+LRT151,LRT,"נתניה-כפ""ס 2","נתניה-כפ""ס דרך קדימה-צורן",Netanya
+LRT152,LRT,"נתניה-כפ""ס 2","כפ""ס-נתניה דרך קדימה-צורן",Netanya
+LRT-L1,LRT,"רק""ל כביש 4",נתניה-אשדוד,Tel Aviv
+LRT-L2,LRT,"רק""ל כביש 4",אשדוד-נתניה,Tel Aviv
+L2-N,LRT,אשדוד-יבנה,אשדוד-יבנה (דרך הנמל),Tel Aviv
+L2-S,LRT,אשדוד-יבנה,יבנה-אשדוד (דרך הנמל),Tel Aviv
+RH-GY1,BRT,רחובות-גן יבנה,רחובות-גן יבנה (דרך אשדוד),Tel Aviv
+RH-GY2,BRT,רחובות-גן יבנה,גן יבנה-רחובות (דרך אשדוד),Tel Aviv
+4.1_Arad-BS,LRT,ערד-באר שבע מערב,ערד-באר שבע מערב,Beer Sheva
+4.1_BS-Arad,LRT,ערד-באר שבע מערב,באר שבע מערב-ערד,Beer Sheva
+4.4_Rahat-Bee'rSheva_Main,LRT,רהט מערב-באר שבע דרום מערב,רהט מערב-באר שבע דרום מערב,Beer Sheva
+4.4_Bee'rSheva-Rahat_Main,LRT,רהט מערב-באר שבע דרום מערב,באר שבע דרום מערב-רהט מערב,Beer Sheva
+4.5_Rahat-Bee'rSheva,LRT,רהט צפון-באר שבע דרום מערב,רהט צפון-באר שבע דרום מערב,Beer Sheva
+4.5_Bee'rSheva-Rahat,LRT,רהט צפון-באר שבע דרום מערב,באר שבע דרום מערב-רהט צפון,Beer Sheva
+4.3_Ofakim-TelSheva,LRT,אופקים-תל שבע,אופקים-תל שבע,Beer Sheva
+4.3_TelSheva-Ofakim,LRT,אופקים-תל שבע,תל שבע-אופקים,Beer Sheva
+4.2_LRT_BRS-Shoket,LRT,"רק""ל ליקית",צומת שוקת-מרכז רפואי באר שבע,Beer Sheva
+4.2_LRT_Shoket-BRS,LRT,"רק""ל ליקית",מרכז רפואי באר שבע-צומת שוקת,Beer Sheva
+LRT_Shoket-BRS_2,LRT,"רק""ל ליקית",צומת שוקת-מרכז רפואי באר שבע,Beer Sheva
+LRT_BRS-Shoket_2,LRT,"רק""ל ליקית",מרכז רפואי באר שבע-צומת שוקת,Beer Sheva
+LRT11,LRT,אדום,אדום כיוון 1,Jerusalem
+LRT12,LRT,אדום,אדום כיוון 2,Jerusalem
+LRT21,LRT,אדום מקווקו,אדום מקווקו כיוון 1,Jerusalem
+LRT22,LRT,אדום מקווקו,אדום מקווקו כיוון 2,Jerusalem
+LRT31,LRT,ורוד,ורוד כיוון 1,Jerusalem
+LRT32,LRT,ורוד,ורוד כיוון 2,Jerusalem
+LRT41,LRT,ירוק,ירוק כיוון 1,Jerusalem
+LRT42,LRT,ירוק,ירוק כיוון 2,Jerusalem
+LRT51,LRT,ירוק בהיר,ירוק בהיר כיוון 1,Jerusalem
+LRT52,LRT,ירוק בהיר,ירוק בהיר כיוון 2,Jerusalem
+LRT61,LRT,כחול,כחול כיוון 1,Jerusalem
+LRT62,LRT,כחול,כחול כיוון 2,Jerusalem
+LRT71,LRT,תכלת,תכלת כיוון 1,Jerusalem
+LRT72,LRT,תכלת,תכלת כיוון 2,Jerusalem
+LRT81,LRT,סגול,סגול כיוון 1,Jerusalem
+LRT82,LRT,סגול,סגול כיוון 2,Jerusalem
+LRT91,LRT,צהוב,צהוב כיוון 1,Jerusalem
+LRT92,LRT,צהוב,צהוב כיוון 2,Jerusalem
+LRT101,LRT,חום,חום כיוון 1,Jerusalem
+LRT102,LRT,חום,חום כיוון 2,Jerusalem
+BRT11,BRT,BRT מעלה אדומים,מעלה אדומים - גבעת התחמושת (כיוון 1),Jerusalem
+BRT12,BRT,BRT מעלה אדומים,מעלה אדומים - גבעת התחמושת (כיוון 2),Jerusalem
+MTR11,Metro,מטרו 1-1 (פסגת זאב - הר חומה),פסגת זאב - הר חומה,Jerusalem
+MTR12,Metro,מטרו 1-2 (הר חומה - פסגת זאב),פסגת זאב - הר חומה,Jerusalem
+MTR21,Metro,מטרו 2-1 (נוף ציון - קרית מנחם),נוף ציון - קרית מנחם,Jerusalem
+MTR22,Metro,מטרו 2-2 (קרית מנחם - נוף ציון),נוף ציון - קרית מנחם,Jerusalem
+MTR31,Metro,מטרו 3-1 (גבעת התחמושת - קרית מנחם),גבעת התחמושת - קרית מנחם,Jerusalem
+MTR32,Metro,מטרו 3-2 (קרית מנחם - גבעת התחמושת),גבעת התחמושת - קרית מנחם,Jerusalem
+CC_1,Cable Line,רכבל עיר דוד,רכבל עיר דוד,Jerusalem
+CC_2,Cable Line,רכבל עיר דוד,רכבל עיר דוד,Jerusalem
+BRT101,BRT,BRT101,עפולה-חדרה,Haifa
+BRT102,BRT,BRT101,חדרה-עפולה,Haifa
+BRT103,BRT,BRT103,רעננה-חדרה,Haifa
+BRT104,BRT,BRT103,חדרה-רעננה,Haifa
+BRT105,BRT,BRT105,חדרה-באקה אל גרבייה,Haifa
+BRT106,BRT,BRT105,באקה אל גרבייה-חדרה,Haifa
+BRT107,BRT,BRT107,חדרה-אור עקיבא,Haifa
+BRT108,BRT,BRT107,אור עקיבא-חדרה,Haifa
+m0610a,BRT,מטרונית 6-1,רכסים-טירת כרמל,Haifa
+m0620a,BRT,מטרונית 6-1,טירת כרמל-רכסים,Haifa
+m0630a,BRT,מטרונית 6-2,יגור-בת גלים,Haifa
+m0640a,BRT,מטרונית 6-2,בת גלים-יגור,Haifa
+m081#a,BRT,מטרונית 8,טכניון-בת גלים,Haifa
+m082#a,BRT,מטרונית 8,בת גלים-טכניון,Haifa
+m0810a,BRT,מטרונית 8,טכניון-בת גלים,Haifa
+m0820a,BRT,מטרונית 8,בת גלים-טכניון,Haifa
+m1010a,BRT,מטרונית 10,עכו-בת גלים,Haifa
+m1020a,BRT,מטרונית 10,בת גלים-עכו,Haifa
+NH_Raanana_Hadera,BRT,"מתע""ן 4",חדרה - רעננה (כביש 4),Hadera
+NH_Hadera_Raanana,BRT,"מתע""ן 4",רעננה - חדרה (כביש 4),Hadera
+OrAkiva_Hadera,BRT,אור עקיבא - חדרה,אור עקיבא - חדרה,Hadera
+Hadera_OrAkiva,BRT,אור עקיבא - חדרה,חדרה - אור עקיבא,Hadera
+NH_OP2_2_1,BRT,עפולה - חדרה,עפולה - חדרה,Hadera
+NH_OP2_2_2,BRT,עפולה - חדרה,חדרה - עפולה,Hadera
+NH_Hadera_Harish_Bakaa,BRT,חריש - חדרה,חריש - חדרה,Hadera
+NH_Bakka_Harish_Hadera,BRT,חריש - חדרה,חדרה - חריש,Hadera
+KefarYona-Netanya,BRT,כפר יונה-נתניה,כפר יונה-נתניה,Netanya
+Netanya-KefarYona,BRT,כפר יונה-נתניה,נתניה-כפר יונה,Netanya
+m1410a,BRT,מטרונית 14,מחלף טל - מרכזית הקריות,Haifa
+m1420a,BRT,מטרונית 14,מרכזית הקריות - מחלף טל,Haifa
+m2010a,BRT,מטרונית 20,מרכז הכרמל כיוון 1,Haifa
+m2020a,BRT,מטרונית 20,מרכז הכרמל כיוון 2,Haifa
+R321-1,BRT,מטרונית 301,מרכזית הקריות - בת גלים,Haifa
+R321-2,BRT,מטרונית 301,בת גלים - מרכזית הקריות,Haifa
+R322-1,BRT,מטרונית 302,מרכזית הקריות-מרכזית חוף הכרמל (דרך המנהרות),Haifa
+R322-2,BRT,מטרונית 302,מרכזית חוף הכרמל-מרכזית הקריות (דרך המנהרות),Haifa
+R323-1,BRT,מטרונית 303,מרכזית הקריות-הדר (דרך קרית ים),Haifa
+R323-2,BRT,מטרונית 303,הדר-מרכזית הקריות (דרך קרית ים),Haifa
+R324-1,BRT,מטרונית 304,מרכזית המפרץ-מרכזית חוף הכרמל (דרך חורב),Haifa
+R324-2,BRT,מטרונית 304,מרכזית חוף הכרמל-מרכזית המפרץ (דרך חורב),Haifa
+R325-1,BRT,מטרונית 305,הטכניון-בת גלים (דרך העצמאות),Haifa
+R325-2,BRT,מטרונית 305,בת גלים-הטכניון (דרך העצמאות),Haifa
+R326-1,BRT,מטרונית 306,האוניברסיטה-דרך צרפת (דרך מרכז הכרמל),Haifa
+R326-2,BRT,מטרונית 306,דרך צרפת-האוניברסיטה (דרך מרכז הכרמל),Haifa
+R327-1,BRT,מטרונית 307,מרכזית המפרץ-טירת כרמל (דרך ההגנה),Haifa
+R327-2,BRT,מטרונית 307,טירת כרמל-מרכזית המפרץ (דרך ההגנה),Haifa
+R328-1,BRT,מטרונית 308,מרכזית המפרץ-נאות כרמל (דרך ההגנה),Haifa
+R328-2,BRT,מטרונית 308,נאות כרמל-מרכזית המפרץ (דרך ההגנה),Haifa
+R329-1,BRT,מטרונית 309,עכו-מרכזית המפרץ,Haifa
+R329-2,BRT,מטרונית 309,מרכזית המפרץ-עכו,Haifa
+R330-1,BRT,מטרונית 310,יגור/רכסים-בת גלים,Haifa
+R330-2,BRT,מטרונית 310,בת גלים-יגור/רכסים,Haifa
+R331-1,BRT,מטרונית 311,גילעם-מרכז הכרמל (דרך המנהרות),Haifa
+R331-2,BRT,מטרונית 311,מרכז הכרמל-גילעם (דרך המנהרות),Haifa
+R1001-1,BRT,מטרונית 1001,גילעם-מרכזית הקריות (דרך הקריון),Haifa
+R1001-2,BRT,מטרונית 1001,מרכזית הקריות-גילעם (דרך הקריון),Haifa
+R1002-1,BRT,מטרונית 1002,גילעם-מרכזית הקריות (דרך בן גוריון),Haifa
+R1002-2,BRT,מטרונית 1002,מרכזית הקריות-גילעם (דרך בן גוריון),Haifa
+R1003-1,BRT,מטרונית 1003,"גילעם-מרכזית הקריות (דרך גבעת טל ואח""י אילת)",Haifa
+R1003-2,BRT,מטרונית 1003,"מרכזית הקריות-גילעם (דרך גבעת טל ואח""י אילת)",Haifa
+rail_6_1,Suburban Rail,Karmiel-Haifa,כרמיאל-חיפה,National
+rail_7_1,Suburban Rail,Tveria-Atlit,טבריה-עתלית,National
+rail_7_2,Suburban Rail,Atlit-Tveria,עתלית-טבריה,National
+rail_10_1,Suburban Rail,Beit Shean-Herzliya,בית שאן-הרצליה,National
+rail_10_2,Suburban Rail,Herzliya-Beit Shean,הרצליה-בית שאן,National
+rail_11_1,Suburban Rail,Zichron-Shoket,זיכרון יעקב-שוקת,National
+rail_11_2,Suburban Rail,Shoket-Zichron,שוקת-זיכרון יעקב,National
+rail_12_1,Suburban Rail,Zichron-Ashkelon,זיכרון יעקב-אשקלון,National
+rail_12_2,Suburban Rail,Ashkelon-Zichron,אשקלון-זיכרון יעקב,National
+rail_15_1,Suburban Rail,Hadera-Shoket,חדרה-שוקת,National
+rail_15_2,Suburban Rail,Shoket-Hadera,שוקת-חדרה,National
+rail_16_1,Suburban Rail,Herzliya-Beit Shemesh,הרצליה-בית שמש,National
+rail_16_2,Suburban Rail,Beit Shemesh-Herzliya,בית שמש-הרצליה,National
+rail_17_1,Suburban Rail,Rosh Haayin-Beer Sheva,ראש העין-באר שבע,National
+rail_19_1,Suburban Rail,Modiin-Ashdod,מודיעין-אשדוד,National
+rail_19_2,Suburban Rail,Ashdod-Modiin,אשדוד-מודיעין,National
+rail_20_1,Suburban Rail,Modiin-Beer Sheva,מודיעין-באר שבע,National
+rail_20_2,Suburban Rail,Beer Sheva-Modiin,באר שבע-מודיעין,National
+rail_22_1,Suburban Rail,Beer Sheva-Arad,באר שבע-ערד,National
+rail_22_2,Suburban Rail,Arad-Beer Sheva,ערד-באר שבע,National
+rail_23_1,Suburban Rail,Beer Sheva-Yeruham,באר  שבע-ירוחם,National
+rail_6_2,Suburban Rail,Haifa-Karmiel,חיפה-כרמיאל,National
+rail_17_2,Suburban Rail,Beer Sheva-Rosh Haayin,באר שבע-ראש העין,National
+rail_23_2,Suburban Rail,Yeruham-Beer Sheva,ירוחם-באר שבע,National
+rail_18_1,Suburban Rail,Modiin-Jerusalem,מודיעין-ירושלים,National
+rail_18_2,Suburban Rail,Jerusalem-Modiin,ירושלים-מודיעין,National
+rail_14_1,Suburban Rail,Netanya-Jerusalem,נתניה-ירושלים,National
+rail_14_2,Suburban Rail,Jerusalem-Netanya,ירושלים-נתניה,National
+rail_13_1,Interurban Rail,Harish-Jerusalem,חריש-ירושלים,National
+rail_13_2,Interurban Rail,Jerusalem-Harish,ירושלים-חריש,National
+rail_2_1,HighSpeed Rail,Nahariya-Eilat,נהריה-אילת,National
+rail_2_2,HighSpeed Rail,Eilat-Nahariya,אילת-נהריה,National
+rail_9_1,HighSpeed Rail,Haifa-Beer Sheva,חיפה-באר שבע,National
+rail_9_2,HighSpeed Rail,Beer Sheva-Haifa,באר שבע-חיפה,National
+rail_8_1,HighSpeed Rail,Haifa-Jerusalem,חיפה-ירושלים,National
+rail_8_2,HighSpeed Rail,Jerusalem-Haifa,ירושלים-חיפה,National
+rail_3_1,Interurban Rail,Nahariya-Beer Sheva,נהריה-באר שבע,National
+rail_3_2,Interurban Rail,Beer Sheva-Nahariya,באר שבע-נהריה,National
+rail_4_1,Interurban Rail,Akko-Beer Sheva,עכו-באר שבע,National
+rail_4_2,Interurban Rail,Beer Sheva-Akko,באר שבע-עכו,National
+rail_5_1,Interurban Rail,Karmiel-Ashkelon,כרמיאל-אשקלון,National
+rail_5_2,Interurban Rail,Ashkelon-Karmiel,אשקלון-כרמיאל,National
+rail_21_1,Interurban Rail,Jerusalem-Beer Sheva,ירושלים-באר שבע,National
+rail_21_2,Interurban Rail,Beer Sheva-Jerusalem,באר שבע-ירושלים,National
+rail_1_1,Interurban Rail,Kiryat Shmona-Modiin,קרית שמונה-מודיעין,National
+rail_1_2,Interurban Rail,Modiin-Kiryat Shmona,מודיעין-קרית שמונה,National
+M1-KS-LOD,Metro,מטרו 1-1 - דרום,כפר סבא-לוד (דרך רעננה),Tel Aviv
+M1-LOD-KS,Metro,מטרו 1-1 - צפון,לוד-כפר סבא (דרך רעננה),Tel Aviv
+M1-RA-RE,Metro,מטרו 1-2 - דרום,רעננה-רחובות,Tel Aviv
+M1-RE-RA,Metro,מטרו 1-2 - צפון,רחובות-רעננה,Tel Aviv
+BluRT1,BRT,קו כחול,צומת בילו-צומת חולון,Tel Aviv
+BluRT2,BRT,קו כחול,צומת חולון-צומת בילו,Tel Aviv
+Light-Blue_S,LRT,,,Tel Aviv
+Turquoise_N,LRT,,,Tel Aviv
+Turquoise_S,LRT,,,Tel Aviv
+LRT10,LRT,,,Jerusalem

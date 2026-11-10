@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lines: Hubs project vs Minhal</title>
+<meta name="description" content="Mass-transit lines of the Hubs project next to those of the Minhal project: where both have a line, where the mode differs, and where only one of them has a line.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<style>
+/*__BASE_CSS__*/
+.modes { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.modes label { display: grid; grid-template-columns: 18px 1fr 108px; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+.modes label:hover { background: var(--bg); }
+.modes input { margin: 0; width: 15px; height: 15px; accent-color: var(--accent); }
+.modes .lbl { font-weight: 500; line-height: 1.2; }
+.modes .lbl small { display: block; font-weight: 400; color: var(--ink-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.bars { display: grid; grid-template-columns: 12px 1fr; gap: 3px 4px; align-items: center; font-size: 10px; color: var(--ink-3); }
+.bar { display: flex; gap: 2px; height: 7px; }
+.bar i { display: block; height: 100%; border-radius: 2px; min-width: 0; }
+.bar .same { background: var(--both); }
+.bar .other { background: repeating-linear-gradient(90deg, var(--both) 0 3px, transparent 3px 5px); }
+.bar .h-none { background: var(--hubs); }
+.bar .m-none { background: var(--minhal); }
+</style>
+</head>
+<body>
+<div id="map" role="application" aria-label="Map of the mass-transit lines of the Hubs project and of the Minhal project"></div>
+
+<section class="panel" id="panel" aria-label="Layers and legend">
+  <header>
+    <h1>Lines: Hubs project vs Minhal</h1>
+    <button type="button" class="btn" id="btn-collapse" aria-expanded="true" aria-controls="panel">Hide</button>
+  </header>
+  <p class="sub" id="sub"></p>
+
+  <p class="eyebrow">Project</p>
+  <ul class="sets">
+    <li><label><input type="checkbox" id="p-hubs" checked>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><line x1="1" y1="8" x2="27" y2="8" stroke="var(--ink)" stroke-width="2.5"/><circle cx="8" cy="8" r="3" fill="var(--ink)" stroke="var(--ring)"/><circle cx="20" cy="8" r="3" fill="var(--ink)" stroke="var(--ring)"/></svg>
+      <span class="lbl">Hubs project<small>thin line, straight between stops</small></span><span class="cnt" id="cnt-hubs"></span></label></li>
+    <li><label><input type="checkbox" id="p-minhal" checked>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><line x1="1" y1="8" x2="27" y2="8" stroke="var(--ink)" stroke-width="7" stroke-opacity=".45" stroke-linecap="round"/></svg>
+      <span class="lbl">Minhal<small>wide band, real alignment</small></span><span class="cnt" id="cnt-minhal"></span></label></li>
+    <li><label><input type="checkbox" id="p-cancelled">
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><line x1="1" y1="8" x2="27" y2="8" stroke="var(--neutral)" stroke-width="3" stroke-dasharray="2 4"/></svg>
+      <span class="lbl">Minhal, cancelled<small>has a year_cancel, left out of the comparison</small></span><span class="cnt" id="cnt-cancelled"></span></label></li>
+    <li><label><input type="checkbox" id="p-stops" checked>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><circle cx="8" cy="8" r="3.5" fill="var(--ink)" stroke="var(--ring)"/><circle cx="20" cy="8" r="4.5" fill="var(--ring)" stroke="var(--ink)" stroke-width="2"/></svg>
+      <span class="lbl">Stops<small>dot = Hubs project stop · ring = Minhal rail station</small></span><span class="cnt"></span></label></li>
+  </ul>
+
+  <p class="eyebrow">Does the other project have a line here?</p>
+  <ul class="sets">
+    <li><label><input type="checkbox" id="c-same" checked>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><line x1="1" y1="8" x2="27" y2="8" stroke="var(--both)" stroke-width="4"/></svg>
+      <span class="lbl">In both, same mode</span><span class="cnt"></span></label></li>
+    <li><label><input type="checkbox" id="c-other" checked>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><line x1="1" y1="8" x2="27" y2="8" stroke="var(--both)" stroke-width="4" stroke-dasharray="5 4"/></svg>
+      <span class="lbl">In both, different mode<small>dashed</small></span><span class="cnt"></span></label></li>
+    <li><label><input type="checkbox" id="c-hubs" checked>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><line x1="1" y1="8" x2="27" y2="8" stroke="var(--hubs)" stroke-width="4"/></svg>
+      <span class="lbl">Only in Hubs project</span><span class="cnt"></span></label></li>
+    <li><label><input type="checkbox" id="c-minhal" checked>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><line x1="1" y1="8" x2="27" y2="8" stroke="var(--minhal)" stroke-width="4"/></svg>
+      <span class="lbl">Only in Minhal</span><span class="cnt"></span></label></li>
+    <li class="key"><span></span>
+      <svg class="sym" viewBox="0 0 28 16" aria-hidden="true"><line x1="1" y1="8" x2="27" y2="8" stroke="var(--neutral)" stroke-width="5" stroke-opacity=".6"/></svg>
+      <span>Minhal rail track: not classed, see its stations</span><span></span></li>
+  </ul>
+
+  <p class="eyebrow">Mode</p>
+  <p class="note" style="margin:0 0 6px">Bars: how much of each project's length falls in each class above · H = Hubs project, M = Minhal (rail: stations).</p>
+  <ul class="modes" id="modes"></ul>
+  <div class="actions">
+    <button type="button" id="btn-all">All modes</button>
+    <button type="button" id="btn-none">No modes</button>
+  </div>
+
+  <div class="actions">
+    <button type="button" id="btn-fit">All</button>
+    <button type="button" data-view="32.08,34.82,12">Tel Aviv</button>
+    <button type="button" data-view="32.80,35.02,12">Haifa</button>
+    <button type="button" data-view="31.78,35.21,12">Jerusalem</button>
+    <button type="button" data-view="31.25,34.80,12">Be'er Sheva</button>
+  </div>
+  <p class="links"><a href="hubs_map.html">Hubs map →</a><a href="lines_comparison.xlsx" download>Line-by-line table (xlsx)</a></p>
+  <p class="note">Click the map to list every line of both projects at that point. "Here" means within __TOL__ m; a Minhal rail station matches a Hubs project rail stop within __RAIL_TOL__ m.
+    Hubs project lines are one per direction and have no alignment in the data, only stops, so their links cut corners (most of all for rail).
+    Rail = Rail + Rail fast count as one family when comparing modes. Basemap: OpenStreetMap.</p>
+</section>
+
+<script src="vendor/leaflet.js"></script>
+<script>
+(function () {
+  const HUBS = __HUBS__, MINHAL = __MINHAL__, STOPS = __STOPS__, RAIL = __RAIL_STATIONS__, MODES = __MODES__, SUMMARY = __SUMMARY__;
+  const css = getComputedStyle(document.documentElement), tok = n => css.getPropertyValue(n).trim();
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const COL = {both: tok('--both'), hubs: tok('--hubs'), minhal: tok('--minhal'), neutral: tok('--neutral'), ring: tok('--ring')};
+  const $ = id => document.getElementById(id);
+
+  const map = L.map('map', {zoomControl: false});
+  L.control.zoom({position: 'topright'}).addTo(map);
+  map.attributionControl.setPrefix('');
+  map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors');
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, className: 'osm-gray'}).addTo(map);
+  // Draw order: Minhal bands, then Hubs project lines, then stops. One canvas per pane keeps thousands of paths fast.
+  const pane = (name, z) => { map.createPane(name).style.zIndex = z; return L.canvas({pane: name, tolerance: 4}); };
+  const rMinhal = pane('minhal', 410), rHubs = pane('hubs', 420), rStops = pane('stops', 430);
+
+  const colour = (proj, cls) => cls === 'rail' ? COL.neutral : cls === 'none' ? COL[proj] : COL.both;
+  const clsText = (proj, cls) => ({same: 'in both, same mode', other: 'in both, different mode', rail: 'rail track, compared by station',
+                                   none: proj === 'hubs' ? 'only in Hubs project' : 'only in Minhal'}[cls]);
+  const items = [];                                    // every drawable thing, with the attributes the filters test
+  const add = (layer, proj, kind, mode, cls, active, feat) => items.push({layer, proj, kind, mode, cls, active, feat});
+
+  MINHAL.forEach(f => f.runs.forEach(([cls, coords]) => {
+    const style = f.active
+      ? {renderer: rMinhal, color: colour('minhal', cls), weight: 7, opacity: cls === 'rail' ? .5 : .55, dashArray: cls === 'other' ? '7 9' : null, lineCap: cls === 'other' ? 'butt' : 'round'}
+      : {renderer: rMinhal, color: COL.neutral, weight: 3, opacity: .9, dashArray: '2 6'};
+    const l = L.polyline(coords, style);
+    l.bindTooltip(`Minhal · ${esc(f.mode)} · ${esc(f.name)}${f.active ? '' : ` · cancelled ${f.cancel}`}`, {sticky: true});
+    add(l, 'minhal', 'line', f.mode, cls, f.active, f);
+  }));
+  HUBS.forEach(f => f.runs.forEach(([cls, coords]) => {
+    const rail = f.mode.startsWith('Rail');          // rail links skip stations and cut across the map: keep them quiet
+    const l = L.polyline(coords, {renderer: rHubs, color: colour('hubs', cls), weight: rail ? 1.5 : 2.5, opacity: rail ? .55 : 1, dashArray: cls === 'other' ? '5 5' : null});
+    l.bindTooltip(`Hubs project · ${esc(f.mode)} · ${esc(f.name)} (${esc(f.id)})`, {sticky: true});
+    add(l, 'hubs', 'line', f.mode, cls, true, f);
+  }));
+  STOPS.forEach(s => {
+    const m = L.circleMarker(s.ll, {renderer: rStops, radius: 3.5, color: COL.ring, weight: 1, fillColor: colour('hubs', s.cls), fillOpacity: 1});
+    m.bindTooltip(`Hubs project stop ${s.id} · ${esc(s.modes.join(', '))} · ${s.lines.length} line${s.lines.length > 1 ? 's' : ''} · ${clsText('hubs', s.cls)}`);
+    s.modes.forEach(mode => add(m, 'hubs', 'stop', mode, s.cls, true, s));
+  });
+  RAIL.forEach(s => {
+    const m = L.circleMarker(s.ll, {renderer: rStops, radius: 5, color: s.active ? colour('minhal', s.cls) : COL.neutral, weight: 2.5, fillColor: COL.ring, fillOpacity: 1,
+                                    dashArray: s.cls === 'other' ? '3 3' : null});
+    m.bindTooltip(`Minhal ${esc(s.mode)} station · ${esc(s.name)} · opens ${s.year} · ${s.cls === 'same' ? `Hubs project rail stop ${s.d} m away` : s.cls === 'other' ? 'Hubs project stop of another mode here' : `no Hubs project stop within __RAIL_TOL__ m (nearest rail stop ${s.d.toLocaleString()} m)`}`);
+    add(m, 'minhal', 'stop', s.mode, s.cls, s.active, s);
+  });
+
+  // ---- filters ------------------------------------------------------------------------------------
+  const modesOn = new Set(MODES);
+  const STOP_ZOOM = 12;
+  const visible = it => {
+    if (!$(it.proj === 'hubs' ? 'p-hubs' : 'p-minhal').checked || !modesOn.has(it.mode)) return false;
+    if (!it.active && !$('p-cancelled').checked) return false;
+    if (it.kind === 'stop' && (!$('p-stops').checked || map.getZoom() < STOP_ZOOM)) return false;
+    if (it.cls === 'rail') return true;
+    return $(it.cls === 'none' ? (it.proj === 'hubs' ? 'c-hubs' : 'c-minhal') : 'c-' + it.cls).checked;
+  };
+  const refresh = () => {
+    const want = new Set(items.filter(visible).map(it => it.layer));   // a stop serving several modes appears once
+    items.forEach(it => { const on = map.hasLayer(it.layer); if (want.has(it.layer) && !on) it.layer.addTo(map); else if (!want.has(it.layer) && on) map.removeLayer(it.layer); });
+  };
+
+  const pct = (a, tot) => tot ? 100 * a / tot : 0;
+  const bar = (parts, noneClass, title) => `<div class="bar" title="${esc(title)}">` +
+    [['same', parts[0]], ['other', parts[1]], [noneClass, parts[2]]].filter(p => p[1] > 0.5).map(p => `<i class="${p[0]}" style="flex:${p[1].toFixed(1)}"></i>`).join('') + `</div>`;
+  $('modes').innerHTML = MODES.map((m, i) => {
+    const s = SUMMARY.find(r => r.mode === m) || {};
+    const h = [pct(s.hubs_km_same_mode_in_minhal, s.hubs_km), pct(s.hubs_km_other_mode_in_minhal, s.hubs_km), pct(s.hubs_km_not_in_minhal, s.hubs_km)];
+    const rail = s.minhal_rail_stations != null;
+    const mm = rail
+      ? [pct(s.minhal_rail_stations_same_mode_in_hubs, s.minhal_rail_stations), pct(s.minhal_rail_stations_other_mode_in_hubs, s.minhal_rail_stations), pct(s.minhal_rail_stations_not_in_hubs, s.minhal_rail_stations)]
+      : [pct(s.minhal_km_same_mode_in_hubs, s.minhal_km), pct(s.minhal_km_other_mode_in_hubs, s.minhal_km), pct(s.minhal_km_not_in_hubs, s.minhal_km)];
+    const t = (who, v, unit, other) => `${who} ${m}${unit}: ${v[0].toFixed(0)}% in both with the same mode, ${v[1].toFixed(0)}% in both with a different mode, ${v[2].toFixed(0)}% only in ${other}`;
+    return `<li><label><input type="checkbox" data-mode="${esc(m)}" checked>
+      <span class="lbl">${esc(m)}<small>${s.hubs_lines ?? 0} Hubs project · ${s.minhal_line_ids ?? 0} Minhal</small></span>
+      <span class="bars"><span>H</span>${s.hubs_km ? bar(h, 'h-none', t('Hubs project', h, ' length', 'Hubs project')) : '<span>none</span>'}
+        <span>M</span>${(rail ? s.minhal_rail_stations : s.minhal_km) ? bar(mm, 'm-none', t('Minhal', mm, rail ? ' stations' : ' length', 'Minhal')) : '<span>none</span>'}</span></label></li>`;
+  }).join('');
+  document.querySelectorAll('#modes input').forEach(cb => cb.addEventListener('change', () => { cb.checked ? modesOn.add(cb.dataset.mode) : modesOn.delete(cb.dataset.mode); refresh(); }));
+  const setModes = on => { document.querySelectorAll('#modes input').forEach(cb => { cb.checked = on; on ? modesOn.add(cb.dataset.mode) : modesOn.delete(cb.dataset.mode); }); refresh(); };
+  $('btn-all').addEventListener('click', () => setModes(true));
+  $('btn-none').addEventListener('click', () => setModes(false));
+  ['p-hubs', 'p-minhal', 'p-cancelled', 'p-stops', 'c-same', 'c-other', 'c-hubs', 'c-minhal'].forEach(id => $(id).addEventListener('change', refresh));
+  map.on('zoomend', refresh);
+
+  const nCancelled = MINHAL.filter(f => !f.active).length;
+  $('cnt-hubs').textContent = HUBS.length;
+  $('cnt-minhal').textContent = MINHAL.length - nCancelled;
+  $('cnt-cancelled').textContent = nCancelled;
+  $('sub').textContent = `${HUBS.length} Hubs project lines (one per direction) · ${new Set(MINHAL.map(f => f.id)).size} Minhal lines in ${MINHAL.length} pieces`;
+
+  // ---- click: list every line of both projects near the point ---------------------------------------
+  const distToSeg = (p, a, b) => {
+    const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2)) : 0;
+    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  };
+  const share = (f, other) => f.pct[0] == null ? 'rail track is compared by station' :
+    `${f.pct[0]}% same mode in ${other} · ${f.pct[1]}% other mode · ${f.pct[2]}% not in ${other}`;
+  const hubsLi = (f, cls) => `<li><bdi class="nm">${esc(f.name)}</bdi> <bdi class="muted">${esc(f.id)}</bdi>
+    <small>${esc(f.src)} · <bdi>${esc(f.desc)}</bdi> · ${f.stops} stops · ${esc(f.area)}</small>
+    <small>here: ${clsText('hubs', cls)} · whole line: ${share(f, 'Minhal')}</small>${f.inferred ? '<small class="muted">stop order inferred (shortest path through the stops)</small>' : ''}</li>`;
+  const minhalLi = (f, cls) => `<li><bdi class="nm">${esc(f.name)}</bdi> <span class="muted">line_id ${f.id}</span>
+    <small>${esc(f.mode)}${f.alt ? ` · <bdi>${esc(f.alt)}</bdi>` : ''} · opens ${f.year}${f.cancel ? ` · cancelled ${f.cancel}` : ''} · ${esc(f.plan ?? 'no plan stage')}${f.plan_name ? ` (${esc(f.plan_name)})` : ''}</small>
+    <small>here: ${f.active ? clsText('minhal', cls) : `cancelled ${f.cancel}, so Hubs project lines are not compared against it · ${clsText('minhal', cls)}`} · whole piece: ${share(f, 'Hubs project')}</small></li>`;
+  map.on('click', e => {
+    const PX = 8, p = map.latLngToLayerPoint(e.latlng), found = {hubs: new Map(), minhal: new Map()};
+    const reach = map.containerPointToLatLng([0, 0]).lat - map.containerPointToLatLng([0, PX]).lat;
+    items.forEach(it => {
+      if (it.kind !== 'line' || !map.hasLayer(it.layer) || found[it.proj].has(it.feat)) return;
+      const b = it.layer.getBounds();
+      if (e.latlng.lat > b.getNorth() + reach || e.latlng.lat < b.getSouth() - reach || e.latlng.lng < b.getWest() - 2 * reach || e.latlng.lng > b.getEast() + 2 * reach) return;
+      const pts = it.layer.getLatLngs().map(ll => map.latLngToLayerPoint(ll));
+      for (let i = 1; i < pts.length; i++) if (distToSeg(p, pts[i - 1], pts[i]) <= PX) { found[it.proj].set(it.feat, it.cls); break; }
+    });
+    if (!found.hubs.size && !found.minhal.size) return;
+    const section = (title, m, li) => `<h3>${title} · ${m.size} line${m.size === 1 ? '' : 's'}</h3>` +
+      (m.size ? `<ul>${[...m].slice(0, 14).map(([f, cls]) => li(f, cls)).join('')}</ul>${m.size > 14 ? `<p class="muted">+ ${m.size - 14} more</p>` : ''}` : '<p class="muted">none here</p>');
+    L.popup({maxWidth: 380}).setLatLng(e.latlng)
+      .setContent(`<div class="pp">${section('Hubs project', found.hubs, hubsLi)}${section('Minhal', found.minhal, minhalLi)}</div>`).openOn(map);
+  });
+
+  // ---- view buttons, panel ---------------------------------------------------------------------------
+  const bounds = L.latLngBounds(MINHAL.flatMap(f => f.runs.flatMap(r => r[1])));
+  $('btn-fit').addEventListener('click', () => map.fitBounds(bounds, {padding: [30, 30]}));
+  document.querySelectorAll('button[data-view]').forEach(b => b.addEventListener('click', () => { const [la, lo, z] = b.dataset.view.split(',').map(Number); map.setView([la, lo], z); }));
+  const panel = $('panel');
+  $('btn-collapse').addEventListener('click', e => { const c = panel.classList.toggle('collapsed'); e.target.textContent = c ? 'Show' : 'Hide'; e.target.setAttribute('aria-expanded', String(!c)); });
+  L.DomEvent.disableClickPropagation(panel); L.DomEvent.disableScrollPropagation(panel);
+  map.setView([32.08, 34.85], 11);
+  refresh();
+})();
+</script>
+</body>
+</html>
