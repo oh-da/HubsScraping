@@ -79,7 +79,7 @@
 <script src="vendor/leaflet.js"></script>
 <script>
 (function () {
-  const HUBS = __HUBS__, MINHAL = __MINHAL__, PAIRS = __PAIRS__, OTHER = __OTHER_STOPS__, FUNNEL = __FUNNEL__, CRITERIA = __CRITERIA__;
+  const HUBS = __HUBS__, MINHAL = __MINHAL__, AROUND = __AROUND__, OTHER = __OTHER_STOPS__, FUNNEL = __FUNNEL__, CRITERIA = __CRITERIA__;
   const TIERS = [['ארצי', 'National', 14], ['מטרופוליני', 'Metropolitan', 11], ['עירוני', 'Local', 8]];
   const css = getComputedStyle(document.documentElement), tok = n => css.getPropertyValue(n).trim();
   const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -93,8 +93,14 @@
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, className: 'osm-gray'}).addTo(map);
 
   const hubById = new Map(HUBS.map(h => [h.g, h])), minhalById = new Map(MINHAL.map(m => [m.id, m]));
-  HUBS.forEach(h => h.pairs = []); MINHAL.forEach(m => m.pairs = []);
+  // AROUND: every Hubs project group x Minhal hub within __TOL__ m of each other. PAIRS: those where both sides are
+  // part of the comparison (a tiered hub and a multi-mode hub); only these make a hub "found by both".
+  HUBS.forEach(h => { h.around = []; h.pairs = []; }); MINHAL.forEach(m => { m.around = []; m.pairs = []; });
+  const PAIRS = AROUND.filter(p => hubById.get(p.group).set !== 'not_hub' && minhalById.get(p.hub_id).set !== 'single_mode');
+  AROUND.forEach(p => { hubById.get(p.group).around.push(p); minhalById.get(p.hub_id).around.push(p); });
   PAIRS.forEach(p => { hubById.get(p.group).pairs.push(p); minhalById.get(p.hub_id).pairs.push(p); });
+  const markOf = new Map();                            // hub -> its mark, to tell whether the filters hide it
+  const hidden = x => { const mk = markOf.get(x); return mk && !visible(mk) ? ' · hidden by the filters' : ''; };
   const radius = h => (TIERS.find(t => t[0] === h.tier) || [0, 0, 6])[2];
   const setTag = {both: ['Found by both', COL.both], only_hubs: ['Only Hubs project', COL.hubs], only_minhal: ['Only Minhal', COL.minhal],
                   not_hub: ['Hubs project · scored, tier Not Hub', COL.hubs], single_mode: ['Minhal · single-mode hub', COL.minhal]};
@@ -102,11 +108,11 @@
   const sameModes = (a, b) => a.length === b.length && a.every(m => b.includes(m));
 
   const hubsPopup = h => {
-    const mine = h.pairs.map(p => ({m: minhalById.get(p.hub_id), d: p.dist_m})).sort((a, b) => a.d - b.d);
-    const there = mine.length
-      ? `<h3>Minhal here</h3><ul>${mine.map(({m, d}) => `<li><bdi class="nm">${esc(m.name)}</bdi> <span class="muted">hub_id ${m.id} · ${d} m</span>
-          <small>${esc(m.modes.join(', '))} · ${sameModes(m.modes, h.modes) ? 'same modes' : 'modes differ'}</small></li>`).join('')}</ul>`
-      : `<h3>Minhal here</h3><p class="muted">${h.single ? 'Only a single-mode Minhal hub within __TOL__ m. ' : ''}Nearest multi-mode hub: <bdi>${esc(h.near)}</bdi>, ${fmt(h.d)} m.</p>`;
+    const mine = h.around.map(p => ({m: minhalById.get(p.hub_id), d: p.dist_m})).sort((a, b) => a.d - b.d);
+    const there = `<h3>Minhal within __TOL__ m · ${mine.length} hub${mine.length === 1 ? '' : 's'}</h3>` +
+      (mine.length ? `<ul>${mine.map(({m, d}) => `<li><bdi class="nm">${esc(m.name)}</bdi> <span class="muted">hub_id ${m.id} · ${d} m${hidden(m)}</span>
+          <small>${esc(m.modes.join(', '))} · ${m.set === 'single_mode' ? 'single-mode hub, left out of the comparison' : sameModes(m.modes, h.modes) ? 'same modes' : 'modes differ'}</small></li>`).join('')}</ul>` : '') +
+      (h.pairs.length ? '' : `<p class="muted">${mine.length ? 'None of them has __MINM__ or more modes. ' : 'None. '}Nearest multi-mode hub: <bdi>${esc(h.near)}</bdi>, ${fmt(h.d)} m.</p>`);
     return `<div class="pp">${tag(h.set)}<h2 dir="auto">${esc(h.name)}</h2>
       <dl class="kv"><dt>tier</dt><dd><bdi>${esc(h.tier)}</bdi>${h.tier_en !== h.tier ? ` · ${h.tier_en}` : ''}</dd>
         <dt>rank</dt><dd>${h.rank} of ${HUBS.length} scored · ${h.rank_tier} in tier · ${h.rank_tier_metro} in tier and metro</dd>
@@ -118,11 +124,11 @@
       ${there}</div>`;
   };
   const minhalPopup = m => {
-    const mine = m.pairs.map(p => ({h: hubById.get(p.group), d: p.dist_m})).sort((a, b) => a.h.rank - b.h.rank);
-    const there = mine.length
-      ? `<h3>Hubs project here</h3><ul>${mine.map(({h, d}) => `<li><bdi class="nm">${esc(h.name)}</bdi> <span class="muted">rank ${h.rank} · ${d} m</span>
-          <small><bdi>${esc(h.tier)}</bdi> · ${esc(h.modes.join(', '))} · ${sameModes(m.modes, h.modes) ? 'same modes' : 'modes differ'}</small></li>`).join('')}</ul>`
-      : `<h3>Hubs project here</h3><p class="muted">${m.not_hub ? 'Only a scored "Not Hub" group within __TOL__ m. ' : ''}Nearest Hubs project hub: <bdi>${esc(m.near)}</bdi>, ${fmt(m.d)} m.</p>`;
+    const mine = m.around.map(p => ({h: hubById.get(p.group), d: p.dist_m})).sort((a, b) => a.d - b.d);
+    const there = `<h3>Hubs project within __TOL__ m · ${mine.length} group${mine.length === 1 ? '' : 's'}</h3>` +
+      (mine.length ? `<ul>${mine.map(({h, d}) => `<li><bdi class="nm">${esc(h.name)}</bdi> <span class="muted">rank ${h.rank} · ${d} m${hidden(h)}</span>
+          <small><bdi>${esc(h.tier)}</bdi> · ${esc(h.modes.join(', '))} · ${h.set === 'not_hub' ? 'scored, no tier: left out of the comparison' : sameModes(m.modes, h.modes) ? 'same modes' : 'modes differ'}</small></li>`).join('')}</ul>` : '') +
+      (m.pairs.length ? '' : `<p class="muted">${mine.length ? 'None of them has a tier. ' : 'None. '}Nearest Hubs project hub with a tier: <bdi>${esc(m.near)}</bdi>, ${fmt(m.d)} m.</p>`);
     return `<div class="pp">${tag(m.set)}<h2 dir="auto">${esc(m.name)}</h2>
       <dl class="kv"><dt>hub_id</dt><dd>${m.id}${m.rail_hub ? ' · rail hub' : ''}</dd><dt>modes</dt><dd>${esc(m.modes.join(', '))}</dd>
         <dt>stations</dt><dd>${m.stations} on ${m.lines} lines</dd>
@@ -132,19 +138,19 @@
 
   // ---- marks ------------------------------------------------------------------------------------------
   const marks = [];                                    // {layers, set, tier}
-  const put = (layers, set, tier) => marks.push({layers, set, tier});
+  const put = (layers, set, tier, hub) => { const mk = {layers, set, tier}; marks.push(mk); if (hub) markOf.set(hub, mk); };
   OTHER.forEach(ll => put([L.circleMarker(ll, {radius: 2, stroke: false, fillColor: COL.neutral, fillOpacity: .8, interactive: false})], 'stops'));
   MINHAL.filter(m => m.set === 'single_mode').forEach(m => {
     const c = L.circleMarker(m.ll, {radius: 4, color: COL.ring, weight: 1, fillColor: COL.minhal, fillOpacity: .55});
     c.bindPopup(() => minhalPopup(m), {maxWidth: 340}); c.bindTooltip(`${m.name} · Minhal, ${m.modes.join(', ')} only`, {direction: 'top'});
-    put([c], 'single_mode');
+    put([c], 'single_mode', null, m);
   });
   PAIRS.forEach(p => { const h = hubById.get(p.group), m = minhalById.get(p.hub_id);
     put([L.polyline([h.ll, m.ll], {color: COL.both, weight: 1.5, opacity: .9, interactive: false})], 'both', h.tier); });
   MINHAL.filter(m => m.set === 'both' || m.set === 'only_minhal').forEach(m => {
     const c = L.circleMarker(m.ll, {radius: 7, color: COL.ring, weight: 1.5, fillColor: m.set === 'both' ? COL.both : COL.minhal, fillOpacity: .95});
     c.bindPopup(() => minhalPopup(m), {maxWidth: 340}); c.bindTooltip(`${m.name} · Minhal hub ${m.id}`, {direction: 'top', offset: [0, -7]});
-    put([c], m.set, m.set === 'both' ? m.pairs.map(p => hubById.get(p.group).tier) : null);
+    put([c], m.set, m.set === 'both' ? m.pairs.map(p => hubById.get(p.group).tier) : null, m);
   });
   HUBS.forEach(h => {
     const hub = h.set !== 'not_hub', r = radius(h), col = h.set === 'both' ? COL.both : COL.hubs;
@@ -154,7 +160,7 @@
     c.bindTooltip(`#${h.rank} ${h.name} · ${h.tier}`, {direction: 'top', offset: [0, -r]});
     const layers = [c];
     if (hub) layers.push(L.tooltip({permanent: true, direction: 'center', className: 'rank', interactive: false, opacity: 1}).setLatLng(h.ll).setContent(String(h.rank)));
-    put(layers, h.set, h.tier);
+    put(layers, h.set, h.tier, h);
   });
 
   // ---- filters ------------------------------------------------------------------------------------------

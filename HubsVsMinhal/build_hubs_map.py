@@ -152,6 +152,10 @@ def main() -> int:
     pairs = [{"group": int(res["group"].iat[i]), "hub_id": int(mh["hub_id"].iat[j]), "dist_m": int(round(D[i, j]))}
              for i, j in zip(*np.nonzero(near)) if is_hub[i] and multi[j]]
     pair_tbl = pd.DataFrame(pairs)
+    # Everything within the tolerance, compared or not: the popups name all of it, so that "only Hubs project"
+    # next to a single-mode Minhal hub, or "only Minhal" next to a Not Hub group, says what is there.
+    around = [{"group": int(res["group"].iat[i]), "hub_id": int(mh["hub_id"].iat[j]), "dist_m": int(round(D[i, j]))}
+              for i, j in zip(*np.nonzero(near))]
 
     # ---- workbook ---------------------------------------------------------------------------------------
     res_ll, mh_ll = res.to_crs(C.WGS), mh.to_crs(C.WGS)
@@ -231,7 +235,7 @@ def main() -> int:
                   tiers={t: int((res["HubType"] == t).sum()) for t in TIERS + ["Not Hub"]})
 
     C.render("hubs_map.html", C.HERE / "hubs_map.html", {
-        "__HUBS__": C.dumps(hubs_feats), "__MINHAL__": C.dumps(minhal_feats), "__PAIRS__": C.dumps(pairs),
+        "__HUBS__": C.dumps(hubs_feats), "__MINHAL__": C.dumps(minhal_feats), "__AROUND__": C.dumps(around),
         "__OTHER_STOPS__": C.dumps(other_stops), "__FUNNEL__": C.dumps(funnel), "__CRITERIA__": C.dumps([n for _, n in CRITERIA]),
         "__TOL__": f"{args.tolerance:.0f}", "__MINM__": str(args.min_modes),
     })

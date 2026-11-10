@@ -95,6 +95,9 @@ When asking "does the other project have the same mode here", Rail and Rail fast
 * **Matching** is by location only: two hubs are the same place when any stop of the Hubs group
   is within 400 m of any station of the Minhal hub. One hub can pair with several. The popup and
   the `both` sheet say whether the mode sets agree.
+* **Popups** list everything the other project has within 400 m, nearest first, also what is
+  left out of the comparison (single-mode Minhal hubs, "Not Hub" groups) and what the filters
+  hide (marked). Only tiered hubs and multi-mode Minhal hubs decide the three sets.
 * **Candidates.** `hub_scoring_calculation.xlsx` lists all 1,059 groups but has no coordinates and
   no node lists, so the 894 groups that failed eligibility cannot be drawn as groups. The map
   shows their stops instead (every stop that is in no scored group), and the eligibility rules are
